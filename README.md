@@ -23,7 +23,9 @@ make clean && make run
 - [x] A simple (hello-world example) bison example.
 - [x] A flex.
 - [x] A AST dumper.
-- [ ] Mem safer (avoid useing `new` directly, instead of `unique_ptr`?).
-- [ ] Automatic Test.(Maybe `cmake test`)
-- [ ] Simplify `yy` and `ll` file.
+- [ ] CMake
 - [ ] Migrate build system from `GNU make` to `CMake`.
+- [ ] FileCheck
+- [ ] Automatic Test.(Maybe `cmake test`)
+- [ ] Mem safer (avoid useing `new` directly, instead of `unique_ptr`?).
+- [ ] Simplify `yy` and `ll` file.

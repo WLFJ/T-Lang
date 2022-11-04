@@ -1,3 +1,4 @@
 *.o
 parser.cc
 parser.hh
+build/**

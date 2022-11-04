@@ -1,8 +1,3 @@
-/*
-  最简单的parser应该长什么样？
-  我们希望是个C++的，并且能够和flex交互
-*/
-
 %require "3.2"
 %language "c++"
 %header
@@ -12,14 +7,14 @@
 %define parse.assert
 
 %code requires{
-  #include "AST.hpp" 
+  #include "../include/AST.hpp" 
   class Driver;
 }
 
 %param { Driver& drv }
 
 %code {
-  #include "driver.hpp"
+  #include "../include/driver.hpp"
 }
 
 %token

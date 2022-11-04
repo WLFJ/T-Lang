@@ -1,7 +1,7 @@
 #include <iostream>
 #include "parser.hh"
-#include "AST.hpp"
-#include "driver.hpp"
+#include "include/AST.hpp"
+#include "include/driver.hpp"
 
 int main(void){
   Driver drv;

@@ -7,7 +7,8 @@ A Tensor based Programing Language.
 ### How to build
 
 ```bash
-git submodule sync --init
+git clone git@github.com:WLFJ/T-Lang.git
+git submodule update --init --depth 1
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
 cmake -G Ninja ../llvm \
    -DLLVM_ENABLE_PROJECTS=mlir \
@@ -15,6 +16,7 @@ cmake -G Ninja ../llvm \
    -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
    -DCMAKE_BUILD_TYPE=Release \
    -DLLVM_ENABLE_ASSERTIONS=ON
+cd -
 mkdir build && cd build
 cmake ..
 cmake --build .

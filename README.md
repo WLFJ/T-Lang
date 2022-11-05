@@ -8,7 +8,7 @@ A Tensor based Programing Language.
 
 ```bash
 git clone git@github.com:WLFJ/T-Lang.git
-git submodule sync --init
+git submodule update --init --depth 1
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
 cmake -G Ninja ../llvm \
    -DLLVM_ENABLE_PROJECTS=mlir \

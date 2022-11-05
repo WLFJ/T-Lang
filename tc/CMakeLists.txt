@@ -4,9 +4,6 @@ FLEX_TARGET(Scanner scanner.ll scanner.cc)
 
 set(LLVM_LINK_COMPONENTS
   Core
-  Support
-  nativecodegen
-  OrcJIT
   )
 
 add_llvm_executable(tc

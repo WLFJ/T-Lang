@@ -7,6 +7,7 @@ A Tensor based Programing Language.
 ### How to build
 
 ```bash
+git clone git@github.com:WLFJ/T-Lang.git
 git submodule sync --init
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
 cmake -G Ninja ../llvm \

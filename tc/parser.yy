@@ -9,6 +9,7 @@
 
 %code requires{
   #include "tc/AST.h" 
+  using namespace tc;
   class Driver;
 }
 
@@ -20,34 +21,88 @@
   #include "tc/driver.h"
 }
 
+%define api.token.prefix {TOK_}
 
-%%
-
-module-list:
-  module
-| module-list module
+%token
+  DEF		"def"
+  LPAREN	"("
+  RPAREN	")"
+  COMMA		","
+  LCBRACE	"{"
+  RCBRACE	"}"
+  SEMI		";"
+  RETURN	"return"
+  EQUAL		"="
+  PLUS		"+"
+  LSBRACE	"["
+  RSBRACE	"]"
 ;
 
+%token <std::string> ID "identifier"
+%token <int> NUMBER "number"
+
+%nterm <std::unique_ptr<RecordAST>> module
+%nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
+%nterm <std::unique_ptr<FunctionAST>> define
+%nterm <std::unique_ptr<PrototypeAST>> prototype
+%nterm <std::unique_ptr<ExprASTList>> block
+
+%%
+program:
+  module-list {
+    drv.tcProgram = std::make_unique<ModuleAST>(std::move($1));
+  }
+;
+
+module-list:
+  module {
+    std::vector<std::unique_ptr<RecordAST>> m;
+    m.push_back(std::move($1));
+    $$ = std::move(m);
+  }
+| module-list module {
+    $1.push_back(std::move($2));
+    $$ = std::move($1);
+  }
+;
+
+/* we'll extend to support more global var? */
 module:
-  define
+  define {
+    $$ = std::move($1);
+  }
 ;
 
 define:
-  prototype block
+  prototype block {
+    auto block = std::make_unique<FunctionAST>(std::move($1), std::move($2));
+    $$ = std::move(block);
+  }
 ;
 
+/* removed decl-list */
 prototype:
-  DEF ID LPAREN decl-list RPAREN
+  DEF ID LPAREN  RPAREN {
+    std::vector<std::unique_ptr<VarDeclExprAST>> args;
+    $$ = std::make_unique<PrototypeAST>(std::move(@1), $2,
+					  std::move(args));
+  }
 ;
+
+/* removed: expression-list */
+block:
+  LCBRACE RCBRACE {
+    $$ = std::make_unique<ExprASTList>();
+  }
+;
+
+/* current at here :) */
 
 decl-list:
   ID
 | ID COMMA decl-list
 ;
 
-block:
-  LCBRACE expression-list RCBRACE
-;
 
 expression-list:
   block-expr SEMI expression-list
@@ -56,7 +111,7 @@ expression-list:
 block-expr:
   decl-or-call
 | RETURN
-| expr
+| expression
 ;
 
 decl-or-call:
@@ -97,8 +152,8 @@ primary:
 ;
 
 identifier-expr:
-  identifier
-| LPAREN identifier RPAREN
+  ID
+| LPAREN ID RPAREN
 ;
 
 number-expr:

@@ -5,6 +5,7 @@
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
+%define api.location.type {Location}
 
 %code requires{
   #include "tc/AST.h" 
@@ -13,27 +14,22 @@
 
 %param { Driver& drv }
 
+%locations
+
 %code {
   #include "tc/driver.h"
 }
 
-%token
-  LPAREN "("
-  RPAREN ")"
-;
-%token <std::string> HELLO;
-
-%nterm <ASTNode*> start-here;
 
 %%
-start-here:
-  LPAREN HELLO RPAREN  { $$ = drv.astTree = new Hello($2); }
+noting-here:
+
 ;
 
 %%
 
 void
-yy::parser::error (const std::string& m)
+yy::parser::error (const location_type& l, const std::string& m)
 {
   std::cerr << "parser: " << m << '\n';
 }

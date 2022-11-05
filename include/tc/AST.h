@@ -15,13 +15,17 @@
 #ifndef __AST_H__
 #define __AST_H__
 
+#include "tc/parser.hh"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <utility>
 #include <vector>
 
+
 namespace tc {
+
 
 /// A variable type with either name or shape information.
 struct VarType {

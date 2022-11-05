@@ -15,7 +15,7 @@ YY_DECL;
 
 class Driver {
   public:
-    ASTNode *astTree;
+    // Noting here
 };
 
 #endif

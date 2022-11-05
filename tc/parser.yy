@@ -5,7 +5,7 @@
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
-%define api.location.type {Location}
+/* %define api.location.type {Location} */
 
 %code requires{
   #include "tc/AST.h" 

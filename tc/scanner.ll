@@ -13,25 +13,25 @@
 
 %{
   // A number symbol corresponding to the value in S.
-  yy::parser::symbol_type
-  make_HELLO (const char* str);
 %}
 
 blank [ \t\r]
 
+%{
+  # define YY_USER_ACTION loc.columns (yyleng);
+%}
 %%
-{blank}+      ;
-\n+           ;
-
-"("           return yy::parser::make_LPAREN ();
-")"           return yy::parser::make_RPAREN ();
-
-"hello"       return yy::parser::make_HELLO (yytext);
+%{
+  yy::location& loc = drv.location;
+  loc.step ();
+%}
+{blank}+      loc.step();
+\n+           loc.lines (yyleng); loc.step ();
 
 .          {
   throw yy::parser::syntax_error
-  ("invalid character: " + std::string(yytext));
+  (loc, "invalid character: " + std::string(yytext));
 }
 
-<<EOF>>    return yy::parser::make_YYEOF ();
+<<EOF>>    return yy::parser::make_YYEOF (loc);
 %%

@@ -16,7 +16,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace toy;
+using namespace tc;
 
 namespace {
 
@@ -65,8 +65,8 @@ private:
 template <typename T>
 static std::string loc(T *node) {
   const auto &loc = node->loc();
-  return (llvm::Twine("@") + *loc.file + ":" + llvm::Twine(loc.line) + ":" +
-          llvm::Twine(loc.col))
+  return (llvm::Twine("@") + *loc.begin.filename + ":" + llvm::Twine(loc.begin.line) + ":" +
+          llvm::Twine(loc.begin.column))
       .str();
 }
 

@@ -15,13 +15,15 @@
 #ifndef __AST_H__
 #define __AST_H__
 
-#include "tc/parser.hh"
+#include "tc/location.hh"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <utility>
 #include <vector>
+
+#define Location yy::location
 
 
 namespace tc {

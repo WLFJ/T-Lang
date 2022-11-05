@@ -7,14 +7,14 @@
 %define parse.assert
 
 %code requires{
-  #include "../include/AST.hpp" 
+  #include "tc/AST.h" 
   class Driver;
 }
 
 %param { Driver& drv }
 
 %code {
-  #include "../include/driver.hpp"
+  #include "tc/driver.h"
 }
 
 %token

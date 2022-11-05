@@ -4,8 +4,8 @@
 # include <cstdlib>
 # include <cstring> // strerror
 # include <string>
-# include "../include/driver.hpp"
-# include "parser.hh"
+# include "tc/driver.h"
+# include "tc/parser.hh"
 %}
 
 /* no debug */

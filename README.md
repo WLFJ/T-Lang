@@ -15,6 +15,7 @@ cmake -G Ninja ../llvm \
    -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
    -DCMAKE_BUILD_TYPE=Release \
    -DLLVM_ENABLE_ASSERTIONS=ON
+cd -
 mkdir build && cd build
 cmake ..
 cmake --build .

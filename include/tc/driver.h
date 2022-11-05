@@ -17,6 +17,7 @@ YY_DECL;
 class Driver {
   public:
     Location location;
+    std::unique_ptr<ModuleAST> tcProgram;
 };
 
 #endif

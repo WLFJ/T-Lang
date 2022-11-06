@@ -39,8 +39,10 @@ Coming Soon ...
 - [x] A AST dumper.
 - [x] CMake
 - [x] Migrate build system from `GNU make` to `CMake`.
-- [ ] ~~Mem safer (avoid useing `new` directly, instead of `unique_ptr`?).~~ No, we'll use AST from ToyLang.
-- [ ] ~~Simplify `yy` and `ll` file.~~ Seems it's already clean yet.
-- [x] Freeze MLIR into `3rdparty`, and include it into CMakeLists. (Should we build it automatically ?)
-- [ ] FileCheck (LLVM is needed)
-- [ ] Automatic Test.(Maybe `cmake test`)
+- [x] ~~Mem safer (avoid useing `new` directly, instead of `unique_ptr`?).~~ No, we'll use AST from ToyLang.
+- [x] ~~Simplify `yy` and `ll` file.~~ Seems it's already clean yet.
+- [x] Freeze MLIR into `3rdparty`, and include it into CMakeLists. (Should we build it automatically ?).
+- [ ] Support `print` in grammar.
+- [ ] Add `TIR`, make them all runnable.
+- [ ] FileCheck (LLVM is needed).
+- [ ] Automatic Test.(Maybe `cmake test`).

@@ -25,8 +25,16 @@ blank [ \t\r]
   yy::location& loc = drv.location;
   loc.step ();
 %}
+
 {blank}+      loc.step();
 \n+           loc.lines (yyleng); loc.step ();
+"def"		return yy::parser::make_DEF(loc);
+"("		return yy::parser::make_LPAREN(loc);
+")"		return yy::parser::make_RPAREN(loc);
+"{"		return yy::parser::make_LCBRACE(loc);
+"}"		return yy::parser::make_RCBRACE(loc);
+
+[a-z]+		return yy::parser::make_ID(yytext, loc);
 
 .          {
   throw yy::parser::syntax_error

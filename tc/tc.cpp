@@ -6,5 +6,10 @@
 int main(void){
   Driver drv;
   yy::parser parser(drv);
-  return 0;
+  auto res = parser.parse();
+  if(!res){
+    // auto dumper = tc::ASTDumper;
+    tc::dump(*drv.tcProgram);
+  }
+  return res;
 }

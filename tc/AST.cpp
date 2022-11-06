@@ -64,8 +64,8 @@ private:
 /// Return a formatted string for the location of any node
 template <typename T>
 static std::string loc(T *node) {
-  const auto &loc = node->loc();
-  return (llvm::Twine("@") + *loc.begin.filename + ":" + llvm::Twine(loc.begin.line) + ":" +
+  const auto loc = node->loc();
+  return (llvm::Twine("@") + "FILE_NAME_NO_IMPL" + ":" + llvm::Twine(loc.begin.line) + ":" +
           llvm::Twine(loc.begin.column))
       .str();
 }
@@ -263,7 +263,7 @@ void ASTDumper::dump(ModuleAST *node) {
   }
 }
 
-namespace toy {
+namespace tc {
 
 // Public API
 void dump(ModuleAST &module) { ASTDumper().dump(&module); }

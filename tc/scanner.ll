@@ -5,7 +5,7 @@
 # include <cstring> // strerror
 # include <string>
 # include "tc/driver.h"
-# include "tc/parser.hh"
+# include "parser.hh"
 %}
 
 /* no debug */

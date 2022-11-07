@@ -15,7 +15,8 @@
 #ifndef __AST_H__
 #define __AST_H__
 
-#include "tc/location.hh"
+#include "location.hh"
+typedef yy::location Location;
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#define Location yy::location
 
 
 namespace tc {

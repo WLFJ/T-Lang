@@ -6,8 +6,8 @@
 #define __DRIVER_H__
 
 #include "tc/AST.h"
-#include "tc/parser.hh"
-#include "tc/location.hh"
+#include "parser.hh"
+#include "location.hh"
 
 #define YY_DECL \
   yy::parser::symbol_type yylex (Driver& drv)

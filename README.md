@@ -10,6 +10,7 @@ A Tensor based Programing Language.
 git clone git@github.com:WLFJ/T-Lang.git
 git submodule update --init --depth 1
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
+# LLVM_ENABLE_RTTI=true is needed.
 cmake -G Ninja ../llvm \
    -DLLVM_ENABLE_PROJECTS=mlir \
    -DLLVM_BUILD_EXAMPLES=ON \
@@ -42,6 +43,9 @@ Coming Soon ...
 - [x] ~~Mem safer (avoid useing `new` directly, instead of `unique_ptr`?).~~ No, we'll use AST from ToyLang.
 - [x] ~~Simplify `yy` and `ll` file.~~ Seems it's already clean yet.
 - [x] Freeze MLIR into `3rdparty`, and include it into CMakeLists. (Should we build it automatically ?).
+- [x] Add backend support.
+- [ ] ~~Dump `llvm::Module` into file.~~ using JIT instead.
+- [ ] Add RTTI support cmd.
 - [ ] Support `print` in grammar.
 - [ ] Add `TIR`, make them all runnable.
 - [ ] FileCheck (LLVM is needed).

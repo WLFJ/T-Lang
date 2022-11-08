@@ -26,15 +26,19 @@ blank [ \t\r]
   loc.step ();
 %}
 
-{blank}+      loc.step();
-\n+           loc.lines (yyleng); loc.step ();
+{blank}+        loc.step();
+\n+             loc.lines (yyleng); loc.step ();
+"#".*           loc.lines (yyleng); loc.step ();
 
 "("		return yy::parser::make_LPAREN(loc);
 ")"		return yy::parser::make_RPAREN(loc);
+"["		return yy::parser::make_LSBRACE(loc);
+"]"		return yy::parser::make_RSBRACE(loc);
 "{"		return yy::parser::make_LCBRACE(loc);
 "}"		return yy::parser::make_RCBRACE(loc);
 
 ";"		return yy::parser::make_SEMI(loc);
+","		return yy::parser::make_COMMA(loc);
 
 "def"		return yy::parser::make_DEF(loc);
 "print"		return yy::parser::make_PRINT(loc);

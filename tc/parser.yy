@@ -29,7 +29,8 @@
   LPAREN	"("
   RPAREN	")"
   COMMA		","
-  LCBRACE	"{" RCBRACE	"}"
+  LCBRACE	"{" 
+  RCBRACE	"}"
   SEMI		";"
   RETURN	"return"
   EQUAL		"="
@@ -45,16 +46,21 @@
 
 %nterm <std::unique_ptr<RecordAST>> module
 %nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
+%nterm <std::vector<std::unique_ptr<ExprAST>>> literal-list
 %nterm <std::unique_ptr<FunctionAST>> define
 %nterm <std::unique_ptr<PrototypeAST>> prototype
 %nterm <std::unique_ptr<ExprASTList>> block
 %nterm <std::unique_ptr<ExprAST>> expression
 %nterm <std::unique_ptr<ExprASTList>> expression-list
+%nterm <std::vector<std::unique_ptr<ExprAST>>> expression-list-comma
 %nterm <std::unique_ptr<ExprAST>> block-expr
 %nterm <std::unique_ptr<ExprAST>> decl-or-call
 %nterm <std::unique_ptr<ExprAST>> call
 %nterm <std::unique_ptr<ExprAST>> primary
 %nterm <std::unique_ptr<ExprAST>> number-expr
+%nterm <std::unique_ptr<ExprAST>> tensor-literal
+%nterm <std::unique_ptr<ExprAST>> identifier-expr
+%nterm <std::unique_ptr<ExprAST>> paren-expr
 
 %%
 program:
@@ -98,7 +104,6 @@ prototype:
   }
 ;
 
-/* removed: expression-list */
 block:
   LCBRACE expression-list RCBRACE {
     $$ = std::move($2);
@@ -154,11 +159,94 @@ expression:
   }
 ;
 
-/* here we define what data type we support. */
+/* TODO: struct-literal-expr is not support for now. */
+/* now we add all supported data-type. */
+/* TODO: std::move redundent will remove via bison config. */
 primary:
-  number-expr
+  identifier-expr
   {
     $$ = std::move($1);
+  }
+| paren-expr
+  {
+    $$ = std::move($1);
+  }
+| tensor-literal
+  {
+    $$ = std::move($1);
+  }
+| number-expr
+  {
+    $$ = std::move($1);
+  }
+;
+
+/* -> up<ExprAST> parseIdentifierExpr() */
+identifier-expr:
+  ID
+  {
+    $$ = std::move(std::make_unique<VariableExprAST>(@1, $1));
+  }
+/* function call */
+| ID LPAREN expression-list-comma RPAREN
+  {
+    $$ = std::move(std::make_unique<CallExprAST>(@1, std::string($1), std::move($3)));
+  }
+;
+
+expression-list-comma:
+  expression
+  {
+    std::vector<std::unique_ptr<ExprAST>> exprList;
+    exprList.push_back(std::move($1));
+    $$ = std::move(exprList);
+  }
+| expression-list-comma COMMA expression
+  {
+    auto exprList = std::move($1);
+    exprList.push_back(std::move($3));
+    $$ = std::move(exprList);
+  }
+;
+
+paren-expr:
+  LPAREN expression RPAREN
+  {
+    $$ = std::move($2);
+  }
+;
+
+/* -> up<LiteralExprAST> parseTensorLiteralExpr() */
+tensor-literal:
+  LSBRACE literal-list RSBRACE
+  {
+    std::vector<int64_t> dims;
+    auto values = std::move($2);
+
+    // First add all current layer dims.
+    dims.push_back(values.size());
+    // Then handle nested dim.
+    // TODO: for now only support 1-d tensor.
+    $$ = std::make_unique<LiteralExprAST>(@1, std::move(values), dims);
+  }
+| number-expr
+  {
+    $$ = std::move($1);
+  }
+;
+
+literal-list:
+  tensor-literal
+  {
+    std::vector<std::unique_ptr<ExprAST>> values;
+    values.push_back(std::move($1));
+    $$ = std::move(values);
+  }
+| literal-list COMMA tensor-literal
+  {
+    auto values = std::move($1);
+    values.push_back(std::move($3));
+    $$ = std::move(values);
   }
 ;
 

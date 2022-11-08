@@ -44,9 +44,10 @@ Coming Soon ...
 - [x] ~~Simplify `yy` and `ll` file.~~ Seems it's already clean yet.
 - [x] Freeze MLIR into `3rdparty`, and include it into CMakeLists. (Should we build it automatically ?).
 - [x] Add backend support.
+- [x] Support `print` in grammar.
+- [x] Add `TIR`, make them all runnable.
+- [ ] Add remain supported expr.
 - [ ] ~~Dump `llvm::Module` into file.~~ using JIT instead.
 - [ ] Add RTTI support cmd.
-- [ ] Support `print` in grammar.
-- [ ] Add `TIR`, make them all runnable.
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).

@@ -160,7 +160,6 @@ expression:
 ;
 
 /* TODO: struct-literal-expr is not support for now. */
-/* now we add all supported data-type. */
 /* TODO: std::move redundent will remove via bison config. */
 primary:
   identifier-expr
@@ -194,8 +193,18 @@ identifier-expr:
   }
 ;
 
+/* further test is needed:
+print(hi());
+print(hi(a));
+print(hi(a, b));
+*/
 expression-list-comma:
-  expression
+  %empty
+  {
+    std::vector<std::unique_ptr<ExprAST>> exprList;
+    $$ = std::move(exprList);
+  }
+| expression
   {
     std::vector<std::unique_ptr<ExprAST>> exprList;
     exprList.push_back(std::move($1));

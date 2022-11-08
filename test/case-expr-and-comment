@@ -7,4 +7,7 @@ def main(){
   print(666); # number, for now only [0-9]+
   # print(sum(a, b)); # yes, we support func call but still need further work ..
   # print(hi()); # NO, NOT SUPPORT.
+  print(hi());
+  print(hi(a));
+  print(hi(a, b));
 }

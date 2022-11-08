@@ -47,6 +47,7 @@ Coming Soon ...
 - [x] Support `print` in grammar.
 - [x] Add `TIR`, make them all runnable.
 - [ ] Add remain supported expr.
+- [ ] Add variable dec like `var a = 1;`.
 - [ ] ~~Dump `llvm::Module` into file.~~ using JIT instead.
 - [ ] Add RTTI support cmd.
 - [ ] FileCheck (LLVM is needed).

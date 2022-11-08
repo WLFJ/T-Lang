@@ -105,17 +105,18 @@ block:
   }
 ;
 
+/* TODO: here we may need to find a elegent way to handle expr; expr; .. */
 expression-list:
-  block-expr
+  block-expr SEMI
   {
     auto exprList = std::move(std::make_unique<ExprASTList>());
     exprList->push_back(std::move($1));
     $$ = std::move(exprList);
   }
-| block-expr SEMI expression-list
+| expression-list block-expr SEMI
   {
-    auto exprList = std::move($3);
-    exprList->push_back(std::move($1));
+    auto exprList = std::move($1);
+    exprList->push_back(std::move($2));
     $$ = std::move(exprList);
   }
 ;

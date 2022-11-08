@@ -9,6 +9,7 @@
 
 %code requires{
   #include "tc/AST.h" 
+  #define YYDEBUG 1
   using namespace tc;
   class Driver;
 }
@@ -28,24 +29,32 @@
   LPAREN	"("
   RPAREN	")"
   COMMA		","
-  LCBRACE	"{"
-  RCBRACE	"}"
+  LCBRACE	"{" RCBRACE	"}"
   SEMI		";"
   RETURN	"return"
   EQUAL		"="
   PLUS		"+"
   LSBRACE	"["
   RSBRACE	"]"
+  PRINT         "print"
 ;
 
 %token <std::string> ID "identifier"
 %token <int> NUMBER "number"
+%token <std::string> STRING "string"
 
 %nterm <std::unique_ptr<RecordAST>> module
 %nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
 %nterm <std::unique_ptr<FunctionAST>> define
 %nterm <std::unique_ptr<PrototypeAST>> prototype
 %nterm <std::unique_ptr<ExprASTList>> block
+%nterm <std::unique_ptr<ExprAST>> expression
+%nterm <std::unique_ptr<ExprASTList>> expression-list
+%nterm <std::unique_ptr<ExprAST>> block-expr
+%nterm <std::unique_ptr<ExprAST>> decl-or-call
+%nterm <std::unique_ptr<ExprAST>> call
+%nterm <std::unique_ptr<ExprAST>> primary
+%nterm <std::unique_ptr<ExprAST>> number-expr
 
 %%
 program:
@@ -91,87 +100,72 @@ prototype:
 
 /* removed: expression-list */
 block:
-  LCBRACE RCBRACE {
-    $$ = std::make_unique<ExprASTList>();
+  LCBRACE expression-list RCBRACE {
+    $$ = std::move($2);
   }
 ;
 
-/* current at here :) */
-
-decl-list:
-  ID
-| ID COMMA decl-list
-;
-
-
 expression-list:
-  block-expr SEMI expression-list
+  block-expr
+  {
+    auto exprList = std::move(std::make_unique<ExprASTList>());
+    exprList->push_back(std::move($1));
+    $$ = std::move(exprList);
+  }
+| block-expr SEMI expression-list
+  {
+    auto exprList = std::move($3);
+    exprList->push_back(std::move($1));
+    $$ = std::move(exprList);
+  }
 ;
 
 block-expr:
   decl-or-call
-| RETURN
-| expression
+  {
+    $$ = std::move($1);
+  }
 ;
 
+/* removed typed-declaration */
 decl-or-call:
-  typed-declaration
-| call
-;
-
-/* we'll do type checking in AST, maybe not now? */
-typed-declaration:
-  ID ID EQUAL expression
+  call
+  {
+    $$ = std::move($1);
+  }
 ;
 
 /* TODO: only one expr for now */
+/* TODO: only print now */
+/* ID LPAREN expression RPAREN */
 call:
-  LPAREN expression RPAREN
+  PRINT LPAREN expression RPAREN
+  {
+    $$ = std::move(std::make_unique<PrintExprAST>(@1, std::move($3)));
+  }
 ;
 
 /* TODO: support more operator, for now only + */
 expression:
-  primary-lhs primary-rhs
+  primary
+  {
+    $$ = std::move($1);
+  }
 ;
 
-primary-lhs:
-  %empty
-| primary
-;
-
-/* TODO: for now only A + B, not A + B + C */
-primary-rhs:
-  PLUS primary
-;
-
+/* here we define what data type we support. */
 primary:
-  identifier-expr
-| number-expr
-| paren-expr
-| tensor-literal-expr
-;
-
-identifier-expr:
-  ID
-| LPAREN ID RPAREN
+  number-expr
+  {
+    $$ = std::move($1);
+  }
 ;
 
 number-expr:
   NUMBER
-;
-
-paren-expr:
-  LPAREN expression RPAREN
-;
-
-tensor-literal-expr:
-  LSBRACE literal-list RSBRACE
-| NUMBER
-;
-
-literal-list:
-  tensor-literal-expr
-| tensor-literal-expr COMMA literal-list
+  {
+    $$ = std::move(std::make_unique<NumberExprAST>(@1, $1));
+  }
 ;
 
 %%

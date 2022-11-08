@@ -33,7 +33,8 @@ blank [ \t\r]
 ")"		return yy::parser::make_RPAREN(loc);
 "{"		return yy::parser::make_LCBRACE(loc);
 "}"		return yy::parser::make_RCBRACE(loc);
-";"		return yy::parser::make_COMMA(loc);
+
+";"		return yy::parser::make_SEMI(loc);
 
 "def"		return yy::parser::make_DEF(loc);
 "print"		return yy::parser::make_PRINT(loc);

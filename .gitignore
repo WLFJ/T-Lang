@@ -2,3 +2,5 @@
 parser.cc
 parser.hh
 build/**
+
+*.swp

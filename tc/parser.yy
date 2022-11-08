@@ -41,6 +41,10 @@
   LS		"<"
   GT		">"
   VAR		"var"
+  PLUS		"+"
+  MINUS		"-"
+  STAR		"*"
+  DOT		"."
 ;
 
 %token <std::string> ID "identifier"

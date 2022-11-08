@@ -48,9 +48,10 @@ Coming Soon ...
 - [x] Add `TIR`, make them all runnable.
 - [x] Add variable dec like `var a = 1;`. (partial, id bind in grammar is needed.)
 - [x] Add RTTI support cmd.
-- [ ] ~~Dump `llvm::Module` into file.~~ using JIT instead.
+- [x] ~~Dump `llvm::Module` into file.~~ using JIT instead.
 - [ ] Add math calc. (for `+` `-` `*` `.`)
 - [ ] Add function fully support. (arbitary argument, return value, caller, callee).
 - [ ] Add remain supported expr.
+- [ ] Add `linalg.generic` like expr support.
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).

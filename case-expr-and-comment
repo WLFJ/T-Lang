@@ -1,0 +1,10 @@
+def main(){
+  # feature-1:
+  # Comment itself ;)
+  print([1, 2, 3]); # print now support tensor.
+  # print([[1, 2], [3, 4]]); # it's buggy.
+  print(([9, 9])); # and .. with paren.
+  print(666); # number, for now only [0-9]+
+  # print(sum(a, b)); # yes, we support func call but still need further work ..
+  # print(hi()); # NO, NOT SUPPORT.
+}

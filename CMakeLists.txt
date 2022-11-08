@@ -39,6 +39,7 @@ set(LLVM_ENABLE_EH ON)
 
 # add_subdirectory(tc)
 BISON_TARGET(Parser tc/parser.yy parser.cc
+  COMPILE_FLAGS "--debug -Wcounterexamples"
   DEFINES_FILE parser.hh)
 FLEX_TARGET(Scanner tc/scanner.ll scanner.cc)
 

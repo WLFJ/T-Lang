@@ -106,9 +106,11 @@ block:
 ;
 
 expression-list:
-  %empty
+  block-expr
   {
-    $$ = std::move(std::make_unique<ExprASTList>());
+    auto exprList = std::move(std::make_unique<ExprASTList>());
+    exprList->push_back(std::move($1));
+    $$ = std::move(exprList);
   }
 | block-expr SEMI expression-list
   {

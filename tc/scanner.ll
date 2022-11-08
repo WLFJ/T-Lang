@@ -37,11 +37,18 @@ blank [ \t\r]
 "{"		return yy::parser::make_LCBRACE(loc);
 "}"		return yy::parser::make_RCBRACE(loc);
 
+"<"		return yy::parser::make_LS(loc);
+">"		return yy::parser::make_GT(loc);
+
 ";"		return yy::parser::make_SEMI(loc);
 ","		return yy::parser::make_COMMA(loc);
 
+"="		return yy::parser::make_EQUAL(loc);
+
 "def"		return yy::parser::make_DEF(loc);
+"var"		return yy::parser::make_VAR(loc);
 "print"		return yy::parser::make_PRINT(loc);
+"return"	return yy::parser::make_RETURN(loc);
 
 [0-9]+		return yy::parser::make_NUMBER(std::stoi(yytext), loc);
 

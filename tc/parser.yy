@@ -38,6 +38,9 @@
   LSBRACE	"["
   RSBRACE	"]"
   PRINT         "print"
+  LS		"<"
+  GT		">"
+  VAR		"var"
 ;
 
 %token <std::string> ID "identifier"
@@ -61,6 +64,11 @@
 %nterm <std::unique_ptr<ExprAST>> tensor-literal
 %nterm <std::unique_ptr<ExprAST>> identifier-expr
 %nterm <std::unique_ptr<ExprAST>> paren-expr
+%nterm <std::unique_ptr<ReturnExprAST>> return
+%nterm <std::unique_ptr<VarDeclExprAST>> declaration
+%nterm <std::unique_ptr<VarType>> type
+%nterm <std::vector<int64_t>> shape-list
+
 
 %%
 program:
@@ -114,9 +122,9 @@ block:
 expression-list:
   block-expr SEMI
   {
-    auto exprList = std::move(std::make_unique<ExprASTList>());
-    exprList->push_back(std::move($1));
-    $$ = std::move(exprList);
+    std::vector<std::unique_ptr<ExprAST>> exprList;
+    exprList.push_back(std::move($1));
+    $$ = std::make_unique<ExprASTList>(std::move(exprList));
   }
 | expression-list block-expr SEMI
   {
@@ -127,17 +135,79 @@ expression-list:
 ;
 
 block-expr:
-  decl-or-call
+  return
+  {
+    $$ = std::move($1);
+  }
+| declaration
+  {
+    $$ = std::move($1);
+  }
+| expression
   {
     $$ = std::move($1);
   }
 ;
 
-/* removed typed-declaration */
-decl-or-call:
-  call
+return:
+  RETURN
   {
-    $$ = std::move($1);
+    $$ = std::move(std::make_unique<ReturnExprAST>(@1, llvm::Optional<std::unique_ptr<ExprAST>>()));
+  }
+| RETURN expression
+  {
+    $$ = std::move(std::make_unique<ReturnExprAST>(@1, std::move($2)));
+  }
+;
+
+/*
+ For variable declaration we design this pattern:
+ [var]? identifier [[ tensor size ]]? ( = expr )?;
+*/
+declaration:
+  VAR ID type
+  {
+    $$ = std::move(std::make_unique<VarDeclExprAST>(@1, $2, *($3)));
+  }
+| VAR ID type EQUAL expression
+  {
+    $$ = std::move(std::make_unique<VarDeclExprAST>(@1, $2, *($3), std::move($5)));
+  }
+| VAR ID EQUAL expression
+  {
+    $$ = std::move(std::make_unique<VarDeclExprAST>(@1, $2, (VarType()), std::move($4)));
+  }
+| ID type EQUAL expression
+  {
+    $$ = std::move(std::make_unique<VarDeclExprAST>(@1, $1, *($2), std::move($4)));
+  }
+| ID EQUAL expression
+  {
+    $$ = std::move(std::make_unique<VarDeclExprAST>(@1, $1, (VarType()), std::move($3)));
+  }
+;
+
+type:
+  LS shape-list GT 
+  {
+    auto type = std::make_unique<VarType>();
+    type->shape = std::move($2);
+    $$ = std::move(type);
+  }
+;
+
+shape-list:
+  NUMBER
+  {
+    std::vector<int64_t> sizeList;
+    sizeList.push_back($1);
+    $$ = std::move(sizeList); 
+  }
+| shape-list COMMA NUMBER
+  {
+    auto sizeList = std::move($1);
+    sizeList.push_back($3);
+    $$ = std::move(sizeList); 
   }
 ;
 
@@ -187,9 +257,15 @@ identifier-expr:
     $$ = std::move(std::make_unique<VariableExprAST>(@1, $1));
   }
 /* function call */
+/*
 | ID LPAREN expression-list-comma RPAREN
   {
     $$ = std::move(std::make_unique<CallExprAST>(@1, std::string($1), std::move($3)));
+  }
+*/
+| call
+  {
+    $$ = std::move($1);
   }
 ;
 

@@ -1,0 +1,10 @@
+def f(){
+  print([123]);
+  return [456];
+}
+
+def main(){
+  f(); # invoked function must have return type.
+  print(f());
+  return;
+}

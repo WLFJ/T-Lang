@@ -61,7 +61,6 @@
 %nterm <std::unique_ptr<ExprASTList>> expression-list
 %nterm <std::vector<std::unique_ptr<ExprAST>>> expression-list-comma
 %nterm <std::unique_ptr<ExprAST>> block-expr
-%nterm <std::unique_ptr<ExprAST>> decl-or-call
 %nterm <std::unique_ptr<ExprAST>> call
 %nterm <std::unique_ptr<ExprAST>> primary
 %nterm <std::unique_ptr<ExprAST>> number-expr
@@ -70,6 +69,7 @@
 %nterm <std::unique_ptr<ExprAST>> paren-expr
 %nterm <std::unique_ptr<ReturnExprAST>> return
 %nterm <std::unique_ptr<VarDeclExprAST>> declaration
+%nterm <std::vector<std::unique_ptr<VarDeclExprAST>>> id-list-comma
 %nterm <std::unique_ptr<VarType>> type
 %nterm <std::vector<int64_t>> shape-list
 
@@ -111,10 +111,30 @@ define:
 
 /* removed decl-list */
 prototype:
-  DEF ID LPAREN  RPAREN {
+  DEF ID LPAREN id-list-comma  RPAREN {
+    $$ = std::make_unique<PrototypeAST>(std::move(@1), $2,
+					  std::move($4));
+  }
+| DEF ID LPAREN RPAREN {
     std::vector<std::unique_ptr<VarDeclExprAST>> args;
     $$ = std::make_unique<PrototypeAST>(std::move(@1), $2,
 					  std::move(args));
+  }
+;
+
+/* TODO: not support `def f(<1,1> a, ...)`, only `def f(a, b)` */
+id-list-comma:
+  ID
+  {
+    std::vector<std::unique_ptr<VarDeclExprAST>> argList;
+    argList.push_back(std::make_unique<VarDeclExprAST>(@1, $1, VarType()));
+    $$ = std::move(argList);
+  }
+| id-list-comma COMMA ID
+  {
+    auto argList = std::move($1);
+    argList.push_back(std::make_unique<VarDeclExprAST>(@1, $3, VarType()));
+    $$ = std::move(argList);
   }
 ;
 
@@ -126,7 +146,11 @@ block:
 
 /* TODO: here we may need to find a elegent way to handle expr; expr; .. */
 expression-list:
-  block-expr SEMI
+  %empty
+  {
+    $$ = std::make_unique<ExprASTList>();
+  }
+| block-expr SEMI
   {
     std::vector<std::unique_ptr<ExprAST>> exprList;
     exprList.push_back(std::move($1));
@@ -221,6 +245,7 @@ shape-list:
 /* TODO: only print now */
 /* ID LPAREN expression RPAREN */
 call:
+  /* special for print */
   PRINT LPAREN expression RPAREN
   {
     $$ = std::move(std::make_unique<PrintExprAST>(@1, std::move($3)));
@@ -280,13 +305,11 @@ identifier-expr:
   {
     $$ = std::move(std::make_unique<VariableExprAST>(@1, $1));
   }
-/* function call */
-/*
+/* general function call based on use decl */
 | ID LPAREN expression-list-comma RPAREN
   {
     $$ = std::move(std::make_unique<CallExprAST>(@1, std::string($1), std::move($3)));
   }
-*/
 | call
   {
     $$ = std::move($1);

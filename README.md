@@ -50,10 +50,11 @@ Coming Soon ...
 - [x] Add RTTI support cmd.
 - [x] ~~Dump `llvm::Module` into file.~~ using JIT instead.
 - [x] Add math calc. (for `+` `*`)
-- [ ] Add advanced operator (`transpost` etc.)
+- [x] Add function fully support. (arbitary argument, return value, caller, callee).
+- [x] For now sub function must have return type.
+- [x] Add advanced operator (`transpost` etc.)
 - [ ] support more binop (`-`, `.`)
-- [ ] Add function fully support. (arbitary argument, return value, caller, callee).
-- [ ] Add remain supported expr.
 - [ ] Add `linalg.generic` like expr support.
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).
+- [?] Add remain supported expr.

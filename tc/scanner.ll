@@ -43,10 +43,10 @@ blank [ \t\r]
 ";"		return yy::parser::make_SEMI(loc);
 ","		return yy::parser::make_COMMA(loc);
 
-"+"		return yy::parser::make_PLUS(loc);
-"-"		return yy::parser::make_MINUS(loc);
-"*"		return yy::parser::make_STAR(loc);
-"."		return yy::parser::make_DOT(loc);
+"+"		return yy::parser::make_PLUS('+', loc);
+"-"		return yy::parser::make_MINUS('-', loc);
+"*"		return yy::parser::make_STAR('*', loc);
+"."		return yy::parser::make_DOT('.', loc);
 
 "="		return yy::parser::make_EQUAL(loc);
 

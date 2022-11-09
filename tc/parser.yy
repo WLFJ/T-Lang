@@ -34,22 +34,22 @@
   SEMI		";"
   RETURN	"return"
   EQUAL		"="
-  PLUS		"+"
   LSBRACE	"["
   RSBRACE	"]"
   PRINT         "print"
   LS		"<"
   GT		">"
   VAR		"var"
-  PLUS		"+"
-  MINUS		"-"
-  STAR		"*"
-  DOT		"."
 ;
 
 %token <std::string> ID "identifier"
 %token <int> NUMBER "number"
 %token <std::string> STRING "string"
+%token <char> PLUS "+"
+%token <char> MINUS "-"
+%token <char> STAR "*"
+%token <char> DOT "."
+
 
 %nterm <std::unique_ptr<RecordAST>> module
 %nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
@@ -72,6 +72,8 @@
 %nterm <std::unique_ptr<VarDeclExprAST>> declaration
 %nterm <std::unique_ptr<VarType>> type
 %nterm <std::vector<int64_t>> shape-list
+
+/* TODO: fix operator precedence. */
 
 
 %%
@@ -225,11 +227,29 @@ call:
   }
 ;
 
-/* TODO: support more operator, for now only + */
+/* TODO: support unary MINUS */
+/* TODO: support - and . */
 expression:
   primary
   {
     $$ = std::move($1);
+  }
+/* | MINUS primary */
+| expression PLUS expression
+  {
+    $$ = std::move(std::make_unique<BinaryExprAST>(@1, $2, std::move($1), std::move($3)));
+  }
+| expression MINUS expression
+  {
+    $$ = std::move(std::make_unique<BinaryExprAST>(@1, $2, std::move($1), std::move($3)));
+  }
+| expression STAR expression
+  {
+    $$ = std::move(std::make_unique<BinaryExprAST>(@1, $2, std::move($1), std::move($3)));
+  }
+| expression DOT expression
+  {
+    $$ = std::move(std::make_unique<BinaryExprAST>(@1, $2, std::move($1), std::move($3)));
   }
 ;
 

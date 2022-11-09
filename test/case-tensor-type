@@ -1,0 +1,5 @@
+def main(){
+  var t<2, 2> = [1, 2, 3, 4];
+  print(t);
+  print(transpose(t));
+}

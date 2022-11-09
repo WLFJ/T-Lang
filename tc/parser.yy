@@ -241,9 +241,7 @@ shape-list:
   }
 ;
 
-/* TODO: only one expr for now */
-/* TODO: only print now */
-/* ID LPAREN expression RPAREN */
+/* special call place here */
 call:
   /* special for print */
   PRINT LPAREN expression RPAREN
@@ -348,7 +346,7 @@ paren-expr:
   }
 ;
 
-/* -> up<LiteralExprAST> parseTensorLiteralExpr() */
+/* TODO: dim check */
 tensor-literal:
   LSBRACE literal-list RSBRACE
   {
@@ -357,8 +355,24 @@ tensor-literal:
 
     // First add all current layer dims.
     dims.push_back(values.size());
+
     // Then handle nested dim.
-    // TODO: for now only support 1-d tensor.
+    /*
+    t = [ [1, 2], [3, 4] ]
+    dim -> [2]
+        -> [2, 2]
+    */
+    if (llvm::any_of(values, [](std::unique_ptr<ExprAST> &expr) {
+          return llvm::isa<LiteralExprAST>(expr.get());
+        })) {
+      auto *firstLiteral = llvm::dyn_cast<LiteralExprAST>(values.front().get());
+      auto firstDims = firstLiteral->getDims();
+      dims.insert(dims.end(), firstDims.begin(), firstDims.end());
+
+      for (auto &expr : values) {
+        auto *exprLiteral = llvm::cast<LiteralExprAST>(expr.get());
+      }
+    }
     $$ = std::make_unique<LiteralExprAST>(@1, std::move(values), dims);
   }
 | number-expr

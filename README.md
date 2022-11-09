@@ -53,6 +53,7 @@ Coming Soon ...
 - [x] Add function fully support. (arbitary argument, return value, caller, callee).
 - [x] For now sub function must have return type.
 - [x] Add advanced operator (`transpost` etc.)
+- [ ] support redundent tensor decl.
 - [ ] support more binop (`-`, `.`)
 - [ ] Add `linalg.generic` like expr support.
 - [ ] FileCheck (LLVM is needed).

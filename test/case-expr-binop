@@ -1,0 +1,14 @@
+def main(){
+  var a = [2];
+  var b = [3];
+  var add = a + b;
+  # var minus = a - b; # NO, not support yet.
+  var star = a * b;
+  # var dot = a . b; # NO, not support yet.
+
+  print(add);
+  print(star);
+
+  var adddd = a + a + b + a + b;
+  print(adddd);
+}

@@ -49,7 +49,9 @@ Coming Soon ...
 - [x] Add variable dec like `var a = 1;`. (partial, id bind in grammar is needed.)
 - [x] Add RTTI support cmd.
 - [x] ~~Dump `llvm::Module` into file.~~ using JIT instead.
-- [ ] Add math calc. (for `+` `-` `*` `.`)
+- [x] Add math calc. (for `+` `*`)
+- [ ] Add advanced operator (`transpost` etc.)
+- [ ] support more binop (`-`, `.`)
 - [ ] Add function fully support. (arbitary argument, return value, caller, callee).
 - [ ] Add remain supported expr.
 - [ ] Add `linalg.generic` like expr support.

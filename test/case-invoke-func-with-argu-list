@@ -1,0 +1,11 @@
+def g(a, b){
+  return a + b;
+}
+
+def main(){
+  var x = [11, 22, 33];
+  var y = [33, 44, 55];
+  var z = g(x, y);
+  print(z);
+  print(g(x, y));
+}

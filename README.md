@@ -10,13 +10,13 @@ A Tensor based Programing Language.
 git clone git@github.com:WLFJ/T-Lang.git
 git submodule update --init --depth 1
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
-# LLVM_ENABLE_RTTI=true is needed.
 cmake -G Ninja ../llvm \
    -DLLVM_ENABLE_PROJECTS=mlir \
    -DLLVM_BUILD_EXAMPLES=ON \
    -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
    -DCMAKE_BUILD_TYPE=Release \
-   -DLLVM_ENABLE_ASSERTIONS=ON
+   -DLLVM_ENABLE_ASSERTIONS=ON \
+   -DLLVM_ENABLE_RTTI=true
 cd -
 mkdir build && cd build
 cmake ..
@@ -46,8 +46,15 @@ Coming Soon ...
 - [x] Add backend support.
 - [x] Support `print` in grammar.
 - [x] Add `TIR`, make them all runnable.
-- [ ] Add remain supported expr.
-- [ ] ~~Dump `llvm::Module` into file.~~ using JIT instead.
-- [ ] Add RTTI support cmd.
+- [x] Add variable dec like `var a = 1;`. (partial, id bind in grammar is needed.)
+- [x] Add RTTI support cmd.
+- [x] ~~Dump `llvm::Module` into file.~~ using JIT instead.
+- [x] Add math calc. (for `+` `*`)
+- [x] Add function fully support. (arbitary argument, return value, caller, callee).
+- [x] For now sub function must have return type.
+- [x] Add advanced operator (`transpost` etc.)
+- [ ] support more binop (`-`, `.`)
+- [ ] Add `linalg.generic` like expr support.
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).
+- [?] Add remain supported expr.

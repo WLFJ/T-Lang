@@ -1,0 +1,4 @@
+def main(){
+  var t = [ [1, 2] ];
+  print(t);
+}

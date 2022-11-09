@@ -314,11 +314,6 @@ identifier-expr:
   }
 ;
 
-/* further test is needed:
-print(hi());
-print(hi(a));
-print(hi(a, b));
-*/
 expression-list-comma:
   %empty
   {

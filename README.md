@@ -54,8 +54,9 @@ Coming Soon ...
 - [x] For now sub function must have return type.
 - [x] Add advanced operator (`transpost` etc.)
 - [x] support redundent tensor decl.
-- [ ] support more binop (`-`, `.`)
 - [ ] Add `linalg.generic` like expr support.
+- [ ] grammar confict fix (include binop precident).
+- [ ] support more binop (`-`, `.`)
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).
 - [?] Add remain supported expr.

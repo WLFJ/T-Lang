@@ -54,6 +54,8 @@ Coming Soon ...
 - [x] For now sub function must have return type.
 - [x] Add advanced operator (`transpost` etc.)
 - [x] support redundent tensor decl.
+- [ ] writing some ref ;P.
+- [ ] research how ir generated.
 - [ ] Add `linalg.generic` like expr support.
 like this:
 ```

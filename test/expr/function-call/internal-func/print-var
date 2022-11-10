@@ -1,8 +1,0 @@
-def main(){
-  var x = 10;
-  var y = 100;
-
-  print(x);
-  print(y);
-  print(x + y);
-}

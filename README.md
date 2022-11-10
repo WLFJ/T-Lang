@@ -55,6 +55,18 @@ Coming Soon ...
 - [x] Add advanced operator (`transpost` etc.)
 - [x] support redundent tensor decl.
 - [ ] Add `linalg.generic` like expr support.
+like this:
+```
+# a -> [1, 2, 3, 4] then b -> [ [1, 2], [3, 4] ]
+# usage: [[ tile(a) ]]
+# reshape
+lin tile(a<m>) {
+  map {a<i> -> <m>, b<j, k> -> <i / k, i % k>}
+  (a) {
+    a;
+  }
+} -> b<n, k>
+```
 - [ ] grammar confict fix (include binop precident).
 - [ ] support more binop (`-`, `.`)
 - [ ] FileCheck (LLVM is needed).

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.17)
 
 project(tc)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(MLIR_DIR 3rdparty/llvm-project/build/lib/cmake/mlir)

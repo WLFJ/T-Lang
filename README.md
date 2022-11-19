@@ -17,6 +17,7 @@ cmake -G Ninja ../llvm \
    -DCMAKE_BUILD_TYPE=Release \
    -DLLVM_ENABLE_ASSERTIONS=ON \
    -DLLVM_ENABLE_RTTI=true
+ninja
 cd -
 mkdir build && cd build
 cmake ..

@@ -27,7 +27,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
-using namespace mlir::tc;
+using namespace mlir::tc; // 这里里面有什么
 using namespace tc;
 
 using llvm::ArrayRef;
@@ -40,13 +40,14 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-namespace {
+namespace { // 这里定义了谁的命名空间？
 
 /// Implementation of a simple MLIR emission from the Toy AST.
 ///
 /// This will emit operations that are specific to the Toy language, preserving
 /// the semantics of the language and (hopefully) allow to perform accurate
 /// analysis and transformation based on these high level semantics.
+/// 这里相当于遍历AST，我们关键看如何进行
 class MLIRGenImpl {
 public:
   MLIRGenImpl(mlir::MLIRContext &context) : builder(&context) {}
@@ -63,7 +64,7 @@ public:
         mlir::tc::FuncOp func = mlirGen(*funcAST);
         if (!func)
           return nullptr;
-        functionMap.insert({func.getName(), func});
+        functionMap.insert({func.getName(), func}); // 如果生成函数op成功，就将其安装到一个上下文对象当中
       } else if (StructAST *str = llvm::dyn_cast<StructAST>(record.get())) {
         if (failed(mlirGen(*str)))
           return nullptr;
@@ -168,6 +169,7 @@ private:
       argTypes.push_back(type);
     }
     auto funcType = builder.getFunctionType(argTypes, llvm::None);
+    // 这里我们能否直接lower到linalg.generic, 然后再重构？
     return builder.create<mlir::tc::FuncOp>(location, proto.getName(),
                                              funcType);
   }
@@ -227,6 +229,12 @@ private:
 
     return function;
   }
+
+  /// Actually Generic is a special case of FunctionAST,
+  /// but there'll only have a linalg.generic op inside.
+  // mlir::tc::FuncOp mlirGen(GenericAST &genericAST){
+  //   return nullptr;
+  // }
 
   /// Return the struct type that is the result of the given expression, or null
   /// if it cannot be inferred.

@@ -294,10 +294,12 @@ primary:
   {
     $$ = std::move($1);
   }
+/*
 | number-expr
   {
     $$ = std::move($1);
   }
+*/
 ;
 
 /* -> up<ExprAST> parseIdentifierExpr() */

@@ -273,6 +273,13 @@ public:
   }
 };
 
+/*
+ * 我们还是需要深入调研...
+  lin tile(a<m: 0 -> i>) {
+    a
+  } -> b<n: j -> i / k, p: k -> i % k>
+ */
+
 /// This class represents a struct definition.
 class StructAST : public RecordAST {
   Location location;

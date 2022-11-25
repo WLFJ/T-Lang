@@ -1,0 +1,9 @@
+def times(a, b) {
+  return a * b;
+}
+def main(){
+  a = [[1, 2], [3, 4]];
+  b = [[1, 2], [3, 4]];
+  c = times(a, b);
+  print(c);
+}

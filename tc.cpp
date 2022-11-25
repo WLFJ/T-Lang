@@ -115,24 +115,60 @@ int main(void){
 
     std::cout << "---------MLIR-END-------------" << std::endl;
 
-    mlir::PassManager pm(&context);
-    applyPassManagerCLOptions(pm);
-    pm.addPass(mlir::createInlinerPass());
+    {
+      mlir::PassManager pm(&context);
+      // applyPassManagerCLOptions(pm);
+      pm.addPass(mlir::createInlinerPass());
 
-    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
-    optPM.addPass(mlir::createCanonicalizerPass());
-    optPM.addPass(mlir::tc::createShapeInferencePass());
-    optPM.addPass(mlir::createCanonicalizerPass());
-    optPM.addPass(mlir::createCSEPass());
+      std::cout << "---------Inliner--------------" << std::endl;
 
-    pm.addPass(mlir::tc::createLowerToAffinePass());
-    pm.addPass(mlir::tc::createLowerToLLVMPass());
+      (void)pm.run(*module);
+      module->dump();
 
-    pm.run(*module);
-    dumpLLVMIR(*module);
+      std::cout << "---------Inliner-END----------" << std::endl;
+    }
+    
+
+    {
+      mlir::PassManager pm(&context);
+      mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+      optPM.addPass(mlir::createCanonicalizerPass());
+      optPM.addPass(mlir::tc::createShapeInferencePass());
+      optPM.addPass(mlir::createCanonicalizerPass());
+      optPM.addPass(mlir::createCSEPass());
+
+      (void)pm.run(*module);
+
+      std::cout << "---------Canonical-ShapeInfer-Canonical-CSE---" << std::endl;
+      module->dump();
+      std::cout << "---------Canonical-ShapeInfer-Canonical-CSE---" << std::endl;
+    }
+
+    {
+      mlir::PassManager pm(&context);
+      pm.addPass(mlir::tc::createLowerToAffinePass());
+
+      std::cout << "---------Affine--------------" << std::endl;
+
+      (void)pm.run(*module);
+      module->dump();
+
+      std::cout << "---------Affine-END----------" << std::endl;
+    }
+
+
+    {
+      mlir::PassManager pm(&context);
+      pm.addPass(mlir::tc::createLowerToLLVMPass());
+
+      (void)pm.run(*module);
+
+      dumpLLVMIR(*module);
+    }
 
     auto jitRes = runJit(*module);
     std::cout << "JIT finished! jitRes=[" << jitRes << "]" << std::endl;
+    return jitRes;
   }
   return res;
 }

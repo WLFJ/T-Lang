@@ -50,6 +50,9 @@
 %token <char> STAR "*"
 %token <char> DOT "."
 
+// expr preference
+%left PLUS MINUS
+%left STAR DOT
 
 %nterm <std::unique_ptr<RecordAST>> module
 %nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
@@ -291,10 +294,12 @@ primary:
   {
     $$ = std::move($1);
   }
+/*
 | number-expr
   {
     $$ = std::move($1);
   }
+*/
 ;
 
 /* -> up<ExprAST> parseIdentifierExpr() */

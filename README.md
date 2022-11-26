@@ -4,6 +4,8 @@ A Tensor based Programing Language.
 
 ## Usage
 
+[How to add Op](doc/how-to-add-op.md)
+
 ### How to build
 
 ```bash

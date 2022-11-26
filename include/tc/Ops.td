@@ -446,4 +446,27 @@ def TransposeOp : Toy_Op<"transpose",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// MatmulOp
+//===----------------------------------------------------------------------===//
+
+def MatmulOp : Toy_Op<"matmul",
+    [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+  let summary = "matmul operation";
+  let description = [{
+    The shapes of the tensor operands are expected to match(axb, bxc -> axc).
+  }];
+
+  let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
+  let results = (outs F64Tensor);
+
+  // Indicate that the operation has a custom parser and printer method.
+  let hasCustomAssemblyFormat = 1;
+
+  // Allow building an MatmulOp with from the two input operands.
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
+  ];
+}
+
 #endif // TOY_OPS

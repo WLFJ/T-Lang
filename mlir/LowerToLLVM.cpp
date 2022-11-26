@@ -12,6 +12,9 @@
 // lowers the combination of Arithmetic + Affine + SCF + Func dialects to the
 // LLVM one:
 //
+//                         Linalg --
+//                                  |
+//                                  v
 //                         Affine --
 //                                  |
 //                                  v
@@ -43,6 +46,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
+#include <memory>
 
 using namespace mlir;
 

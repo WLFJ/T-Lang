@@ -19,6 +19,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::tc;
@@ -267,6 +268,58 @@ void AddOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
 /// Infer the output shape of the AddOp, this is required by the shape inference
 /// interface.
 void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
+
+//===----------------------------------------------------------------------===//
+// MatmulOp
+//===----------------------------------------------------------------------===//
+
+// TODO: add verify func to check shape.
+
+void MatmulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                  mlir::Value lhs, mlir::Value rhs) {
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+  state.addOperands({lhs, rhs});
+}
+
+mlir::ParseResult MatmulOp::parse(mlir::OpAsmParser &parser,
+                               mlir::OperationState &result) {
+  return parseBinaryOp(parser, result);
+}
+
+void MatmulOp::print(mlir::OpAsmPrinter &p) { printBinaryOp(p, *this); }
+
+/// Infer the output shape of the MatmulOp, this is required by the shape inference
+/// interface.
+/*
+ * a x b . b x c -> a x c
+ * {other dims A} x a x b . {other dims B} x b x c -> max{A, B} x a x c
+ */
+void MatmulOp::inferShapes() {
+  auto lhsType = getOperand(0).getType().cast<RankedTensorType>();
+  auto rhsType = getOperand(1).getType().cast<RankedTensorType>();
+
+  SmallVector<int64_t, 4> lhsDims(lhsType.getShape());
+  SmallVector<int64_t, 4> rhsDims(rhsType.getShape());
+
+  assert(lhsDims.size() == rhsDims.size() && "MatmulOp: lhs and rhs shape not match");
+  // TODO: add shape check.
+  // TODO: add auto dim match.
+  // assert(lhsDims.back() == (rhsDims.back() - 1) && "MatmulOp: lhs and rhs shape not match.");
+
+  SmallVector<int64_t, 4> resDims;
+  auto size = lhsDims.size();
+  for(int i = 0; i < size; ++ i){
+    if(i == size - 2){
+      resDims.push_back(lhsDims[i]);
+    } else if(i == size - 1){
+      resDims.push_back(rhsDims[i]);
+    } else{
+      resDims.push_back(std::max(lhsDims[i], rhsDims[i]));
+    }
+  }
+
+  getResult().setType(RankedTensorType::get(resDims, lhsType.getElementType()));
+}
 
 //===----------------------------------------------------------------------===//
 // CastOp

@@ -320,6 +320,8 @@ private:
     auto location = loc(binop.loc());
 
     // If this is an access operation, handle it immediately.
+    // for now we not support struct feature.
+    /*
     if (binop.getOp() == '.') {
       llvm::Optional<size_t> accessIndex = getMemberIndex(binop);
       if (!accessIndex) {
@@ -328,19 +330,21 @@ private:
       }
       return builder.create<StructAccessOp>(location, lhs, *accessIndex);
     }
+    */
 
     // Otherwise, this is a normal binary op.
     mlir::Value rhs = mlirGen(*binop.getRHS());
     if (!rhs)
       return nullptr;
 
-    // Derive the operation name from the binary operator. At the moment we only
-    // support '+' and '*'.
+    // Derive the operation name from the binary operator.
     switch (binop.getOp()) {
     case '+':
       return builder.create<AddOp>(location, lhs, rhs);
     case '*':
       return builder.create<MulOp>(location, lhs, rhs);
+    case '.':
+      return builder.create<MatmulOp>(location, lhs, rhs);
     }
 
     emitError(location, "invalid binary operator '") << binop.getOp() << "'";

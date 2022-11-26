@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "parser.hh"
 #include "tc/AST.h"
 #include "tc/driver.h"

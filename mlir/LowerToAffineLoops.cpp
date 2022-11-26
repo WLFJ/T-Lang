@@ -12,10 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "tc/Dialect.h"
 #include "tc/Passes.h"
 
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -23,6 +31,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 
@@ -299,6 +308,30 @@ struct TransposeOpLowering : public ConversionPattern {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// ToyToAffine RewritePatterns: Matmul operations
+//===----------------------------------------------------------------------===//
+
+struct MatmulOpLowering : public ConversionPattern {
+  MatmulOpLowering(MLIRContext *ctx)
+      : ConversionPattern(tc::MatmulOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto loc = op->getLoc();
+    tc::MatmulOp mmOp = llvm::dyn_cast<tc::MatmulOp>(op);
+    assert(operands.size() == 2);
+
+    auto memRefType = convertTensorToMemRef(mmOp.getType());
+    auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
+
+    auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(loc, ValueRange{operands[0], operands[1]}, ValueRange{alloc});
+    rewriter.replaceOp(op, alloc);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -314,7 +347,7 @@ struct ToyToAffineLoweringPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToAffineLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect>();
+    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
   }
   void runOnOperation() final;
 };
@@ -329,7 +362,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, BuiltinDialect, arith::ArithDialect,
-                         func::FuncDialect, memref::MemRefDialect>();
+                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
@@ -347,7 +380,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // the set of patterns that will lower the Toy operations.
   RewritePatternSet patterns(&getContext());
   patterns.add<AddOpLowering, ConstantOpLowering, FuncOpLowering, MulOpLowering,
-               PrintOpLowering, ReturnOpLowering, TransposeOpLowering>(
+               PrintOpLowering, ReturnOpLowering, TransposeOpLowering, MatmulOpLowering>(
       &getContext());
 
   // With the target and rewrite patterns defined, we can now attempt the

@@ -303,6 +303,7 @@ void MatmulOp::inferShapes() {
 
   assert(lhsDims.size() == rhsDims.size() && "MatmulOp: lhs and rhs shape not match");
   // TODO: add shape check.
+  // TODO: add auto dim match.
   // assert(lhsDims.back() == (rhsDims.back() - 1) && "MatmulOp: lhs and rhs shape not match.");
 
   SmallVector<int64_t, 4> resDims;

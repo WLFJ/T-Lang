@@ -35,7 +35,7 @@ def TransposeOp : Toy_Op<"transpose",
 
 in `mlir/Dialect.cpp`, mainly add shape inference support.
 
-```
+```cpp
 //===----------------------------------------------------------------------===//
 // MatmulOp
 //===----------------------------------------------------------------------===//
@@ -92,7 +92,7 @@ void MatmulOp::inferShapes() {
 in `mlir/LowerToAffineLoops.cpp`, convert `toy.matmul` into related affine code.
 here I simply use `linalg.matmul` and convert it into affine loops.
 
-```
+```cpp
 //===----------------------------------------------------------------------===//
 // ToyToAffine RewritePatterns: Matmul operations
 //===----------------------------------------------------------------------===//

@@ -157,7 +157,6 @@ int main(void){
       std::cout << "---------Affine-END----------" << std::endl;
     }
 
-
     {
       mlir::PassManager pm(&context);
       pm.addPass(mlir::tc::createLowerToLLVMPass());

@@ -312,6 +312,8 @@ struct TransposeOpLowering : public ConversionPattern {
 // ToyToAffine RewritePatterns: Matmul operations
 //===----------------------------------------------------------------------===//
 
+// TODO: here we convert to linalg.matmul, next we need convert into
+// affine loops.
 struct MatmulOpLowering : public ConversionPattern {
   MatmulOpLowering(MLIRContext *ctx)
       : ConversionPattern(tc::MatmulOp::getOperationName(), 1, ctx) {}
@@ -324,9 +326,17 @@ struct MatmulOpLowering : public ConversionPattern {
     assert(operands.size() == 2);
 
     auto memRefType = convertTensorToMemRef(mmOp.getType());
+
+    // TODO: find better place to save result, and fuse with potential AddOp.
     auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
 
     auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(loc, ValueRange{operands[0], operands[1]}, ValueRange{alloc});
+
+    // convert linalg.matmul into loops.
+    (void)linalg::linalgOpToAffineLoops(rewriter, linalgMatmulOp);
+
+    linalgMatmulOp->erase();
+
     rewriter.replaceOp(op, alloc);
     return success();
   }
@@ -341,6 +351,7 @@ struct MatmulOpLowering : public ConversionPattern {
 /// This is a partial lowering to affine loops of the toy operations that are
 /// computationally intensive (like matmul for example...) while keeping the
 /// rest of the code in the Toy dialect.
+
 namespace {
 struct ToyToAffineLoweringPass
     : public PassWrapper<ToyToAffineLoweringPass, OperationPass<ModuleOp>> {

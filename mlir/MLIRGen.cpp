@@ -24,7 +24,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 #include <numeric>
 
 using namespace mlir::tc;
@@ -546,6 +549,8 @@ private:
   }
 
   /// Emit a constant for a single number (FIXME: semantic? broadcast?)
+  /// UPDATE: For now we first write this op, then we'll rewrite it to
+  /// match the real use case.
   mlir::Value mlirGen(NumberExprAST &num) {
     return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
   }
@@ -586,6 +591,7 @@ private:
     }
 
     mlir::Value value = mlirGen(*init);
+
     if (!value)
       return nullptr;
 
@@ -609,6 +615,27 @@ private:
       // declared with specific shape, we emit a "reshape" operation. It will
       // get optimized out later as needed.
     } else if (!varType.shape.empty()) {
+      ConstantOp c = dyn_cast<ConstantOp>(value.getDefiningOp());
+      auto elementsFromUserDefine = c.getValue().getNumElements();
+      int64_t neededElements = 1;
+      for(auto dimSize : varType.shape){
+        neededElements *= dimSize;
+      }
+
+      std::cout << elementsFromUserDefine << ", " << neededElements << "\n";
+      if(elementsFromUserDefine == 1 && neededElements != elementsFromUserDefine){
+        // we need rewrite current element.
+	SmallVector<mlir::Float64Type> buf(1);
+	auto fillVal = c.getValue().getValues<double>();
+	std::cout << fillVal[0] << "\n";
+
+	std::vector<double> bcData;
+	for(int i = 0 ; i < neededElements; i ++)
+		bcData.push_back(fillVal[0]);
+
+	auto data = mlir::DenseElementsAttr::get(getType(varType.shape), makeArrayRef(bcData));
+	value = builder.create<ConstantOp>(loc(vardecl.loc()), data);
+      }
       value = builder.create<ReshapeOp>(loc(vardecl.loc()),
                                         getType(varType.shape), value);
     }

@@ -26,11 +26,16 @@ cmake ..
 cmake --build .
 ```
 
-## How to extend the compiler
+## How to use
 
-1. Edit `parser.yy` to set what grammer you want.
-2. According to `parser`, you may want to add token support in `scanner.ll`
-3. The same thing in `AST.hpp` and `AST.cpp`.
+1. compile project.
+2. write your source code saved in `test.tc`.
+3. run following command:
+
+```bash
+chmod +x build/tc && ./tcc test.tc && ./a.out
+```
+
 
 ## How to write test cases
 

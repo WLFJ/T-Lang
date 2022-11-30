@@ -49,7 +49,6 @@ set(LLVM_LINK_COMPONENTS
   Core
   Support
   nativecodegen
-  OrcJIT
   )
 
 include_directories(include)

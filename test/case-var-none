@@ -1,0 +1,4 @@
+def main(){
+  var a<2, 3> = [0];
+  print(a); # should be [[0, 0, 0], [0, 0, 0]]
+}

@@ -8,8 +8,14 @@ A Tensor based Programing Language.
 
 ### How to build
 
+note: due to we need latest bison, so you may need compile
+from source and add soft link under `/usr/bin/bison` to make
+sure cmake find it.
+
 ```bash
+sudo apt install cmake flex ninja-build clang
 git clone git@github.com:WLFJ/T-Lang.git
+cd T-Lang
 git submodule update --init --depth 1
 mkdir 3rdparty/llvm-project/build && cd 3rdparty/llvm-project/build
 cmake -G Ninja ../llvm \
@@ -23,7 +29,7 @@ ninja
 cd -
 mkdir build && cd build
 cmake ..
-cmake --build .
+cmake --build . -j$(nproc)
 ```
 
 ## How to use

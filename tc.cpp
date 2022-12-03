@@ -1,5 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "parser.hh"
 #include "tc/AST.h"
@@ -64,9 +66,6 @@ int dumpLLVMIR(mlir::ModuleOp module) {
     llvm::errs() << "Failed to optimize LLVM IR " << err << "\n";
     return -1;
   }
-
-  // TypeInfer: llvm::Module
-  llvm::errs() << *llvmModule << "\n";
 
   // dump to .bc file for static link.
   std::error_code EC;
@@ -137,15 +136,42 @@ int main(void){
 
     {
       mlir::PassManager pm(&context);
-      pm.addPass(mlir::tc::createLowerToLLVMPass());
+      mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+      optPM.addPass(mlir::createLoopFusionPass());
+      optPM.addPass(mlir::createAffineParallelizePass());
 
       (void)pm.run(*module);
 
+      std::cout << "---------Fusion-Parallel---" << std::endl;
+      module->dump();
+      std::cout << "---------Fusion-Parallel---" << std::endl;
+
+    }
+    
+    {
+      mlir::PassManager pm(&context);
+      mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+      optPM.addPass(mlir::createLowerAffinePass());
+      optPM.addPass(mlir::createConvertSCFToCFPass());
+
+      (void)pm.run(*module);
+
+      std::cout << "---------Fusion-Parallel---" << std::endl;
+      module->dump();
+      std::cout << "---------Fusion-Parallel---" << std::endl;
+
+    }
+
+    // for now only have cf.
+
+    {
+      mlir::PassManager pm(&context);
+      pm.addPass(mlir::tc::createLowerToLLVMPass());
+
+      (void)pm.run(*module
       dumpLLVMIR(*module);
     }
 
-    // auto jitRes = runJit(*module);
-    // std::cout << "JIT finished! jitRes=[" << jitRes << "]" << std::endl;
     return 0;
   }
   return res;

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Value.h"
@@ -358,7 +359,7 @@ struct ToyToAffineLoweringPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToAffineLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
+    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect, tensor::TensorDialect>();
   }
   void runOnOperation() final;
 };
@@ -373,7 +374,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, BuiltinDialect, arith::ArithDialect,
-                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
+                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect, tensor::TensorDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

@@ -55,6 +55,10 @@ blank [ \t\r]
 "print"		return yy::parser::make_PRINT(loc);
 "return"	return yy::parser::make_RETURN(loc);
 
+"double"	return yy::parser::make_F64(loc);
+"float"		return yy::parser::make_F32(loc);
+"int"		return yy::parser::make_I8(loc);
+
 [0-9]+		return yy::parser::make_NUMBER(std::stoi(yytext), loc);
 
 [a-z]+		return yy::parser::make_ID(yytext, loc);

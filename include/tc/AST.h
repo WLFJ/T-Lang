@@ -16,6 +16,8 @@
 #define __AST_H__
 
 #include "location.hh"
+#include <memory>
+#include <type_traits>
 typedef yy::location Location;
 
 #include "llvm/ADT/ArrayRef.h"
@@ -48,6 +50,7 @@ public:
     Expr_BinOp,
     Expr_Call,
     Expr_Print,
+    Expr_TypeSpec,
   };
 
   ExprAST(ExprASTKind kind, Location location)
@@ -96,6 +99,40 @@ public:
 
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Literal; }
+};
+
+enum TYPE { F64, F32, I8 };
+
+class TypeSpecExprAST : public ExprAST {
+  std::unique_ptr<ExprAST> value;
+  TYPE type;
+
+public:
+  TypeSpecExprAST(Location loc, std::unique_ptr<ExprAST> value, TYPE type=F64)
+      : ExprAST(Expr_TypeSpec, std::move(loc)), value(std::move(value)),
+        type(type) {}
+
+  TYPE getType() { return type; }
+
+  llvm::StringRef getTypeStr() {
+    switch (type) {
+    case F64:
+      return "F64";
+    case F32:
+      return "F32";
+    case I8:
+      return "I8";
+    default:
+      return "NOT_SUPPORT_TYPE";
+    }
+  }
+
+  ExprAST *getValue() { return value.get(); }
+
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) {
+    return c->getKind() == Expr_TypeSpec;
+  }
 };
 
 /// Expression class for a literal struct value.

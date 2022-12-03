@@ -49,10 +49,15 @@
 %token <char> MINUS "-"
 %token <char> STAR "*"
 %token <char> DOT "."
+%token F64
+%token F32
+%token I8
+
 
 // expr preference
 %left PLUS MINUS
 %left STAR DOT
+%right RPAREN
 
 %nterm <std::unique_ptr<RecordAST>> module
 %nterm <std::vector<std::unique_ptr<RecordAST>>> module-list
@@ -75,6 +80,7 @@
 %nterm <std::vector<std::unique_ptr<VarDeclExprAST>>> id-list-comma
 %nterm <std::unique_ptr<VarType>> type
 %nterm <std::vector<int64_t>> shape-list
+%nterm <TYPE> datatype
 
 /* TODO: fix operator precedence. */
 
@@ -276,6 +282,25 @@ expression:
 | expression DOT expression
   {
     $$ = std::move(std::make_unique<BinaryExprAST>(@1, $2, std::move($1), std::move($3)));
+  }
+| LPAREN datatype RPAREN expression
+  {
+    $$ = std::move(std::make_unique<TypeSpecExprAST>(@1, std::move($4), $2));
+  }
+;
+
+datatype:
+  F64
+  {
+    $$ = F64;
+  }
+| F32
+  {
+    $$ = F32;
+  }
+| I8
+  {
+    $$ = I8;
   }
 ;
 

@@ -16,8 +16,6 @@
 
 #include <memory>
 
-// 这里设计的十分巧妙，不同命名空间意味着我们的关注点不同。
-
 namespace mlir {
 class MLIRContext;
 template <typename OpTy>

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "parser.hh"
 #include "tc/AST.h"
 #include "tc/driver.h"
@@ -89,6 +90,7 @@ int main(void){
     mlir::MLIRContext context;
     // Load our Dialect in this MLIR Context.
     context.getOrLoadDialect<mlir::tc::ToyDialect>();
+    context.getOrLoadDialect<mlir::tensor::TensorDialect>();
     auto module = mlirGen(context, *drv.tcProgram);
     module->dump();
 

@@ -41,6 +41,7 @@ private:
   void dump(ExprASTList *exprList);
   void dump(NumberExprAST *num);
   void dump(LiteralExprAST *node);
+  void dump(TypeSpecExprAST *node);
   void dump(StructLiteralExprAST *node);
   void dump(VariableExprAST *node);
   void dump(ReturnExprAST *node);
@@ -79,7 +80,7 @@ static std::string loc(T *node) {
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
   llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
+      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, TypeSpecExprAST, NumberExprAST,
             PrintExprAST, ReturnExprAST, StructLiteralExprAST, VarDeclExprAST,
             VariableExprAST>([&](auto *node) { this->dump(node); })
       .Default([&](ExprAST *) {
@@ -147,6 +148,15 @@ void ASTDumper::dump(LiteralExprAST *node) {
   printLitHelper(node);
   llvm::errs() << " " << loc(node) << "\n";
 }
+
+/// Print type specification.
+void ASTDumper::dump(TypeSpecExprAST *node) {
+  INDENT();
+  llvm::errs() << "TypeSpec: " << "-> " << node->getTypeStr();
+  llvm::errs() << " " << loc(node) << "\n";
+  dump(node->getValue());
+}
+
 
 /// Print a struct literal.
 void ASTDumper::dump(StructLiteralExprAST *node) {

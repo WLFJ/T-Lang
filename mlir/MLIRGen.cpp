@@ -12,6 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "tc/MLIRGen.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
 #include "tc/AST.h"
 #include "tc/Dialect.h"
 
@@ -111,6 +115,11 @@ private:
   /// A mapping for named struct types to the underlying MLIR type and the
   /// original AST node.
   llvm::StringMap<std::pair<mlir::Type, StructAST *>> structMap;
+
+  /// A mapping for some specific mlirGen process.
+  /// For now we add it to support "Enviroment AST" like TypeSpec to decide
+  /// tensor shape when create 'toy.constant' op.
+  llvm::StringMap<int64_t> astCtxMap;
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(const Location &loc) {
@@ -381,6 +390,25 @@ private:
     return mlir::success();
   }
 
+  mlir::Type astCtxInferType() {
+    mlir::Type elementType = builder.getF64Type();
+    auto definedTyPair = astCtxMap.find("type");
+    if (definedTyPair != astCtxMap.end()) {
+      switch (definedTyPair->second) {
+      case 0:
+        elementType = builder.getF64Type();
+        break;
+      case 1:
+        elementType = builder.getF32Type();
+        break;
+      case 2:
+        elementType = builder.getIntegerType(32);
+        break;
+      }
+    }
+    return elementType;
+  }
+
   /// Emit a constant for a literal/constant array. It will be emitted as a
   /// flattened array of data in an Attribute attached to a `toy.constant`
   /// operation. See documentation on [Attributes](LangRef.md#attributes) for
@@ -402,24 +430,57 @@ private:
   mlir::DenseElementsAttr getConstantAttr(LiteralExprAST &lit) {
     // The attribute is a vector with a floating point value per element
     // (number) in the array, see `collectData()` below for more details.
-    std::vector<double> data;
-    data.reserve(std::accumulate(lit.getDims().begin(), lit.getDims().end(), 1,
-                                 std::multiplies<int>()));
-    collectData(lit, data);
+    mlir::Type elementType = astCtxInferType();
 
-    // The type of this attribute is tensor of 64-bit floating-point with the
-    // shape of the literal.
-    mlir::Type elementType = builder.getF64Type();
-    auto dataType = mlir::RankedTensorType::get(lit.getDims(), elementType);
+    if(elementType.isF64()){
+	    std::vector<double> data;
+	    data.reserve(std::accumulate(lit.getDims().begin(), lit.getDims().end(), 1,
+					 std::multiplies<int>()));
+	    collectData(lit, data);
 
-    // This is the actual attribute that holds the list of values for this
-    // tensor literal.
-    return mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+	    // The type of this attribute is defined by astCtxMap if "type" is defined.
+	    auto dataType = mlir::RankedTensorType::get(lit.getDims(), elementType);
+
+	    // This is the actual attribute that holds the list of values for this
+	    // tensor literal.
+	    auto res = mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+	    return res;
+
+    } else if(elementType.isF32()){
+	    std::vector<float> data;
+	    data.reserve(std::accumulate(lit.getDims().begin(), lit.getDims().end(), 1,
+					 std::multiplies<int>()));
+	    collectData(lit, data);
+
+	    // The type of this attribute is defined by astCtxMap if "type" is defined.
+	    auto dataType = mlir::RankedTensorType::get(lit.getDims(), elementType);
+
+	    // This is the actual attribute that holds the list of values for this
+	    // tensor literal.
+	    auto res = mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+	    return res;
+
+    } else if(elementType.isInteger(32)){
+	    std::vector<int32_t> data;
+	    data.reserve(std::accumulate(lit.getDims().begin(), lit.getDims().end(), 1,
+					 std::multiplies<int>()));
+	    collectData(lit, data);
+
+	    // The type of this attribute is defined by astCtxMap if "type" is defined.
+	    auto dataType = mlir::RankedTensorType::get(lit.getDims(), elementType);
+
+	    // This is the actual attribute that holds the list of values for this
+	    // tensor literal.
+	    auto res = mlir::DenseElementsAttr::get(dataType, llvm::makeArrayRef(data));
+	    return res;
+    } else {
+      assert(false && "unsupport type");
+    }
   }
   mlir::DenseElementsAttr getConstantAttr(NumberExprAST &lit) {
     // The type of this attribute is tensor of 64-bit floating-point with no
     // shape.
-    mlir::Type elementType = builder.getF64Type();
+    mlir::Type elementType = astCtxInferType();
     auto dataType = mlir::RankedTensorType::get({}, elementType);
 
     // This is the actual attribute that holds the list of values for this
@@ -462,7 +523,8 @@ private:
 
     // Build the MLIR op `toy.constant`. This invokes the `ConstantOp::build`
     // method.
-    return builder.create<ConstantOp>(loc(lit.loc()), type, dataAttribute);
+    auto op = builder.create<ConstantOp>(loc(lit.loc()), type, dataAttribute);
+    return op;
   }
 
   /// Emit a struct literal. It will be emitted as an array of
@@ -486,7 +548,8 @@ private:
   ///  [ 1, 2, 3, 4 ]
   /// Individual numbers are represented as doubles.
   /// Attributes are the way MLIR attaches constant to operations.
-  void collectData(ExprAST &expr, std::vector<double> &data) {
+  template<typename T>
+  void collectData(ExprAST &expr, std::vector<T> &data) {
     if (auto *lit = dyn_cast<LiteralExprAST>(&expr)) {
       for (auto &value : lit->getValues())
         collectData(*value, data);
@@ -570,6 +633,8 @@ private:
       return mlirGen(cast<CallExprAST>(expr));
     case tc::ExprAST::Expr_Num:
       return mlirGen(cast<NumberExprAST>(expr));
+    case tc::ExprAST::Expr_TypeSpec:
+      return mlirGen(cast<TypeSpecExprAST>(expr));
     default:
       emitError(loc(expr.loc()))
           << "MLIR codegen encountered an unhandled expr kind '"
@@ -646,6 +711,17 @@ private:
     return value;
   }
 
+  /// Codegen a type converter wether type match or not.
+  mlir::Value mlirGen(TypeSpecExprAST &specAST) {
+	  auto location = loc(specAST.loc());
+
+	  if(isa<LiteralExprAST>(specAST.getValue()))
+		  astCtxMap.insert({StringRef("type"), specAST.getType()});
+	  mlir::Value tensorOp = mlirGen(*specAST.getValue());
+	  astCtxMap.clear();
+	  return tensorOp;
+  }
+
   /// Codegen a list of expression, return failure if one of them hit an error.
   mlir::LogicalResult mlirGen(ExprASTList &blockAST) {
     SymbolTableScopeT varScope(symbolTable);
@@ -677,10 +753,10 @@ private:
   mlir::Type getType(ArrayRef<int64_t> shape) {
     // If the shape is empty, then this type is unranked.
     if (shape.empty())
-      return mlir::UnrankedTensorType::get(builder.getF64Type());
+      return mlir::UnrankedTensorType::get(astCtxInferType());
 
     // Otherwise, we use the given shape.
-    return mlir::RankedTensorType::get(shape, builder.getF64Type());
+    return mlir::RankedTensorType::get(shape, astCtxInferType());
   }
 
   /// Build an MLIR type from a Toy AST variable type (forward to the generic

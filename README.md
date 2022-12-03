@@ -67,10 +67,12 @@ Coming Soon ...
 - [x] Add function fully support. (arbitary argument, return value, caller, callee).
 - [x] For now sub function must have return type.
 - [x] Add advanced operator (`transpost` etc.)
+- [x] grammar confict fix (binop precident).
 - [x] support redundent tensor decl.
-- [ ] support none value variable declearation.
+- [x] support none value variable declearation.
+- [x] research how ir generated.
+- [ ] add `linalg` opt layer.
 - [ ] writing some ref ;P.
-- [ ] research how ir generated.
 - [ ] Add `linalg.generic` like expr support.
 like this:
 ```
@@ -84,8 +86,7 @@ lin tile(a<m>) {
   }
 } -> b<n, k>
 ```
-- [ ] grammar confict fix (include binop precident).
 - [ ] support more binop (`-`, `.`)
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).
-- [?] Add remain supported expr.
+- [ ] Add remain supported expr.

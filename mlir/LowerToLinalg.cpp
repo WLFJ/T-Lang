@@ -12,10 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/PDL/IR/PDLOps.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Value.h"
@@ -30,13 +34,15 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Casting.h"
+#include <iostream>
 
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns
+// ToyToLinalg RewritePatterns
 //===----------------------------------------------------------------------===//
 
 /// Convert the given TensorType into the corresponding MemRefType.
@@ -101,7 +107,7 @@ static void lowerOpToLoops(Operation *op, ValueRange operands,
 
 namespace {
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Binary operations
+// ToyToLinalg RewritePatterns: Binary operations
 //===----------------------------------------------------------------------===//
 
 template <typename BinaryOp, typename LoweredBinaryOp>
@@ -140,76 +146,35 @@ using AddOpLowering = BinaryOpLowering<tc::AddOp, arith::AddFOp>;
 using MulOpLowering = BinaryOpLowering<tc::MulOp, arith::MulFOp>;
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Constant operations
+// ToyToLinalg RewritePatterns: Constant operations
 //===----------------------------------------------------------------------===//
 
+/// Previously we convert it into memref manually, but it will generate 
+/// too much code so that it makes optimization slowly.
 struct ConstantOpLowering : public OpRewritePattern<tc::ConstantOp> {
   using OpRewritePattern<tc::ConstantOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tc::ConstantOp op,
                                 PatternRewriter &rewriter) const final {
     DenseElementsAttr constantValue = op.getValue();
-    Location loc = op.getLoc();
+    Location loc = op->getLoc();
 
-    // When lowering the constant operation, we allocate and assign the constant
-    // values to a corresponding memref allocation.
-    auto tensorType = op.getType().cast<TensorType>();
-    auto memRefType = convertTensorToMemRef(tensorType);
-    auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
+    auto data = op.getValue();
+    Type dataTy = op.getType();
 
-    // We will be generating constant indices up-to the largest dimension.
-    // Create these constants up-front to avoid large amounts of redundant
-    // operations.
-    auto valueShape = memRefType.getShape();
-    SmallVector<Value, 8> constantIndices;
+    // Convert toy.constant -> arith.constant
+    auto aConstOp = rewriter.create<arith::ConstantOp>(loc, data, dataTy);
 
-    if (!valueShape.empty()) {
-      for (auto i : llvm::seq<int64_t>(
-               0, *std::max_element(valueShape.begin(), valueShape.end())))
-        constantIndices.push_back(
-            rewriter.create<arith::ConstantIndexOp>(loc, i));
-    } else {
-      // This is the case of a tensor of rank 0.
-      constantIndices.push_back(
-          rewriter.create<arith::ConstantIndexOp>(loc, 0));
-    }
-
-    // The constant operation represents a multi-dimensional constant, so we
-    // will need to generate a store for each of the elements. The following
-    // functor recursively walks the dimensions of the constant shape,
-    // generating a store when the recursion hits the base case.
-    SmallVector<Value, 2> indices;
-    auto valueIt = constantValue.value_begin<FloatAttr>();
-    std::function<void(uint64_t)> storeElements = [&](uint64_t dimension) {
-      // The last dimension is the base case of the recursion, at this point
-      // we store the element at the given index.
-      if (dimension == valueShape.size()) {
-        rewriter.create<AffineStoreOp>(
-            loc, rewriter.create<arith::ConstantOp>(loc, *valueIt++), alloc,
-            llvm::makeArrayRef(indices));
-        return;
-      }
-
-      // Otherwise, iterate over the current dimension and add the indices to
-      // the list.
-      for (uint64_t i = 0, e = valueShape[dimension]; i != e; ++i) {
-        indices.push_back(constantIndices[i]);
-        storeElements(dimension + 1);
-        indices.pop_back();
-      }
-    };
-
-    // Start the element storing recursion from the first dimension.
-    storeElements(/*dimension=*/0);
-
-    // Replace this operation with the generated alloc.
-    rewriter.replaceOp(op, alloc);
+    // but it not working.
+    rewriter.replaceOp(op, {aConstOp});
+    // rewriter.eraseOp(op);
+    // aConstop->getBlock()->dump();
     return success();
   }
 };
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Func operations
+// ToyToLinalg RewritePatterns: Func operations
 //===----------------------------------------------------------------------===//
 
 struct FuncOpLowering : public OpConversionPattern<tc::FuncOp> {
@@ -240,7 +205,7 @@ struct FuncOpLowering : public OpConversionPattern<tc::FuncOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Print operations
+// ToyToLinalg RewritePatterns: Print operations
 //===----------------------------------------------------------------------===//
 
 struct PrintOpLowering : public OpConversionPattern<tc::PrintOp> {
@@ -258,7 +223,7 @@ struct PrintOpLowering : public OpConversionPattern<tc::PrintOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Return operations
+// ToyToLinalg RewritePatterns: Return operations
 //===----------------------------------------------------------------------===//
 
 struct ReturnOpLowering : public OpRewritePattern<tc::ReturnOp> {
@@ -278,7 +243,7 @@ struct ReturnOpLowering : public OpRewritePattern<tc::ReturnOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Transpose operations
+// ToyToLinalg RewritePatterns: Transpose operations
 //===----------------------------------------------------------------------===//
 
 struct TransposeOpLowering : public ConversionPattern {
@@ -309,7 +274,7 @@ struct TransposeOpLowering : public ConversionPattern {
 };
 
 //===----------------------------------------------------------------------===//
-// ToyToAffine RewritePatterns: Matmul operations
+// ToyToLinalg RewritePatterns: Matmul operations
 //===----------------------------------------------------------------------===//
 
 // TODO: here we convert to linalg.matmul, next we need convert into
@@ -325,19 +290,18 @@ struct MatmulOpLowering : public ConversionPattern {
     tc::MatmulOp mmOp = llvm::dyn_cast<tc::MatmulOp>(op);
     assert(operands.size() == 2);
 
-    auto memRefType = convertTensorToMemRef(mmOp.getType());
+    auto ty = mmOp.getType();
+    // due to matmul is a += matmul(b, c), so, we need a empty tensor a.
+    auto resTensor = rewriter.create<tensor::EmptyOp>(loc, ty.getShape(), ty.getElementType());
 
-    // TODO: find better place to save result, and fuse with potential AddOp.
-    auto alloc = insertAllocAndDealloc(memRefType, loc, rewriter);
-
-    auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(loc, ValueRange{operands[0], operands[1]}, ValueRange{alloc});
+    auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(loc, ValueRange{operands[0], operands[1]}, ValueRange{resTensor});
 
     // convert linalg.matmul into loops.
-    (void)linalg::linalgOpToAffineLoops(rewriter, linalgMatmulOp);
+    // (void)linalg::linalgOpToAffineLoops(rewriter, linalgMatmulOp);
 
-    linalgMatmulOp->erase();
+    // linalgMatmulOp->erase();
 
-    rewriter.replaceOp(op, alloc);
+    rewriter.replaceOp(op, {linalgMatmulOp.getResult(0)});
     return success();
   }
 };
@@ -345,7 +309,7 @@ struct MatmulOpLowering : public ConversionPattern {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// ToyToAffineLoweringPass
+// ToyToLinalgLoweringPass
 //===----------------------------------------------------------------------===//
 
 /// This is a partial lowering to affine loops of the toy operations that are
@@ -353,9 +317,9 @@ struct MatmulOpLowering : public ConversionPattern {
 /// rest of the code in the Toy dialect.
 
 namespace {
-struct ToyToAffineLoweringPass
-    : public PassWrapper<ToyToAffineLoweringPass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToAffineLoweringPass)
+struct ToyToLinalgLoweringPass
+    : public PassWrapper<ToyToLinalgLoweringPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToLinalgLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
@@ -364,7 +328,7 @@ struct ToyToAffineLoweringPass
 };
 } // namespace
 
-void ToyToAffineLoweringPass::runOnOperation() {
+void ToyToLinalgLoweringPass::runOnOperation() {
   // The first thing to define is the conversion target. This will define the
   // final target for this lowering.
   ConversionTarget target(getContext());
@@ -373,7 +337,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, BuiltinDialect, arith::ArithDialect,
-                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
+                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect, tensor::TensorDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
@@ -383,7 +347,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // only treat it as `legal` if its operands are legal.
   target.addIllegalDialect<tc::ToyDialect>();
   target.addDynamicallyLegalOp<tc::PrintOp>([](tc::PrintOp op) {
-    return llvm::none_of(op->getOperandTypes(),
+    return llvm::all_of(op->getOperandTypes(),
                          [](Type type) { return type.isa<TensorType>(); });
   });
 
@@ -404,6 +368,6 @@ void ToyToAffineLoweringPass::runOnOperation() {
 
 /// Create a pass for lowering operations in the `Affine` and `Std` dialects,
 /// for a subset of the Toy IR (e.g. matmul).
-std::unique_ptr<Pass> mlir::tc::createLowerToAffinePass() {
-  return std::make_unique<ToyToAffineLoweringPass>();
+std::unique_ptr<Pass> mlir::tc::createLowerToLinalgPass() {
+  return std::make_unique<ToyToLinalgLoweringPass>();
 }

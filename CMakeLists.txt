@@ -66,7 +66,7 @@ add_llvm_executable(tc
   ${FLEX_Scanner_OUTPUTS}
   mlir/MLIRGen.cpp
   mlir/Dialect.cpp
-  mlir/LowerToAffineLoops.cpp
+  mlir/LowerToLinalg.cpp
   mlir/LowerToLLVM.cpp
   mlir/ShapeInferencePass.cpp
   mlir/ToyCombine.cpp

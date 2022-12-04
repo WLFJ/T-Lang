@@ -2,7 +2,13 @@
 #include <fstream>
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "parser.hh"
 #include "tc/AST.h"
 #include "tc/driver.h"
@@ -80,99 +86,41 @@ int main(void){
   yy::parser parser(drv);
   auto res = parser.parse();
   if(!res){
-    // auto dumper = tc::ASTDumper;
-    tc::dump(*drv.tcProgram);
-
-    std::cout << "---------AST-END-------------" << std::endl;
-
     mlir::MLIRContext context;
     // Load our Dialect in this MLIR Context.
     context.getOrLoadDialect<mlir::tc::ToyDialect>();
     auto module = mlirGen(context, *drv.tcProgram);
+
+    mlir::PassManager pm(&context);
+    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+
+    pm.addPass(mlir::createInlinerPass());
+    optPM.addPass(mlir::createCanonicalizerPass());
+    optPM.addPass(mlir::tc::createShapeInferencePass());
+    optPM.addPass(mlir::createCanonicalizerPass());
+    optPM.addPass(mlir::createCSEPass());
+
+    pm.addPass(mlir::tc::createLowerToLinalgPass());
+
+    // {Affine, Linalg, Arith, Tensor} -> Bufferize
+
+    pm.addPass(mlir::arith::createArithBufferizePass());
+
+    mlir::OpPassManager &funcPM = pm.nest<mlir::func::FuncOp>();
+
+    // replace tensor.empty 
+    funcPM.addPass(mlir::bufferization::createEmptyTensorToAllocTensorPass());
+    funcPM.addPass(mlir::bufferization::createFinalizingBufferizePass());
+    
+    pm.addPass(mlir::tc::createLowerToLLVMPass());
+
+    auto res = pm.run(*module);
+
     module->dump();
 
-    std::cout << "---------MLIR-END-------------" << std::endl;
+    dumpLLVMIR(*module);
 
-    {
-      mlir::PassManager pm(&context);
-      // applyPassManagerCLOptions(pm);
-      pm.addPass(mlir::createInlinerPass());
-
-      std::cout << "---------Inliner--------------" << std::endl;
-
-      (void)pm.run(*module);
-      module->dump();
-
-      std::cout << "---------Inliner-END----------" << std::endl;
-    }
-    
-
-    {
-      mlir::PassManager pm(&context);
-      mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
-      optPM.addPass(mlir::createCanonicalizerPass());
-      optPM.addPass(mlir::tc::createShapeInferencePass());
-      optPM.addPass(mlir::createCanonicalizerPass());
-      optPM.addPass(mlir::createCSEPass());
-
-      (void)pm.run(*module);
-
-      std::cout << "---------Canonical-ShapeInfer-Canonical-CSE---" << std::endl;
-      module->dump();
-      std::cout << "---------Canonical-ShapeInfer-Canonical-CSE---" << std::endl;
-    }
-
-    {
-      mlir::PassManager pm(&context);
-      pm.addPass(mlir::tc::createLowerToAffinePass());
-
-      std::cout << "---------Affine--------------" << std::endl;
-
-      (void)pm.run(*module);
-      module->dump();
-
-      std::cout << "---------Affine-END----------" << std::endl;
-    }
-
-    {
-      mlir::PassManager pm(&context);
-      mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-      optPM.addPass(mlir::createLoopFusionPass());
-      optPM.addPass(mlir::createAffineParallelizePass());
-
-      (void)pm.run(*module);
-
-      std::cout << "---------Fusion-Parallel---" << std::endl;
-      module->dump();
-      std::cout << "---------Fusion-Parallel---" << std::endl;
-
-    }
-    
-    {
-      mlir::PassManager pm(&context);
-      mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-      optPM.addPass(mlir::createLowerAffinePass());
-      optPM.addPass(mlir::createConvertSCFToCFPass());
-
-      (void)pm.run(*module);
-
-      std::cout << "---------Fusion-Parallel---" << std::endl;
-      module->dump();
-      std::cout << "---------Fusion-Parallel---" << std::endl;
-
-    }
-
-    // for now only have cf.
-
-    {
-      mlir::PassManager pm(&context);
-      pm.addPass(mlir::tc::createLowerToLLVMPass());
-
-      (void)pm.run(*module
-      dumpLLVMIR(*module);
-    }
-
-    return 0;
+    return res.failed();
   }
   return res;
 }

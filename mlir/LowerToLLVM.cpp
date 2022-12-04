@@ -25,6 +25,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
+#include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "tc/Dialect.h"
 #include "tc/Passes.h"
 
@@ -207,7 +210,9 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   // patterns must be applied to fully transform an illegal operation into a
   // set of legal ones.
   RewritePatternSet patterns(&getContext());
-  populateAffineToStdConversionPatterns(patterns);
+  linalg::populateLinalgToStandardConversionPatterns(patterns);
+  populateBufferizationToMemRefConversionPatterns(patterns);
+  // populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);
   mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);

@@ -57,7 +57,7 @@ blank [ \t\r]
 
 [0-9]+		return yy::parser::make_NUMBER(std::stoi(yytext), loc);
 
-[a-z]+		return yy::parser::make_ID(yytext, loc);
+[a-z]+[0-9]*	return yy::parser::make_ID(yytext, loc);
 
 .          {
   throw yy::parser::syntax_error

@@ -168,7 +168,7 @@ int main(void){
       mlir::PassManager pm(&context);
       pm.addPass(mlir::tc::createLowerToLLVMPass());
 
-      (void)pm.run(*module
+      (void)pm.run(*module);
       dumpLLVMIR(*module);
     }
 

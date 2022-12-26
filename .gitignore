@@ -7,3 +7,5 @@ build/**
 compile_commands.json
 .cache
 a.out
+
+bison/**

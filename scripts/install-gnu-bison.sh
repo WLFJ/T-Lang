@@ -12,5 +12,7 @@ then
 	cd bison-3.8.2
 	./configure
 
-	sudo make install -j$(nproc)
+	cd ../..
 fi
+cd bison/bison-3.8.2/
+sudo make install -j$(nproc)

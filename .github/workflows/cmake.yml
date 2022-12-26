@@ -41,12 +41,12 @@ jobs:
 
     - name: Compile and Install GNU/Bison
       run: |
-        bash ./scripts/install-gnu-bison.sh
+        sudo bash ./scripts/install-gnu-bison.sh
       
-    - name: Compile 3rdparty
-      run: |
-        bash ./scripts/llvm-compile.sh
-    
-    - name: Build
-      run: |
-        bash ./scripts/build.sh
+        # - name: Compile 3rdparty
+        #   run: |
+        #     bash ./scripts/llvm-compile.sh
+        # 
+        # - name: Build
+        #   run: |
+        #     bash ./scripts/build.sh

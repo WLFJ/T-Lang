@@ -2,6 +2,8 @@
 
 A Tensor based Programing Language.
 
+[![Build](https://github.com/WLFJ/T-Lang/actions/workflows/cmake.yml/badge.svg)](https://github.com/WLFJ/T-Lang/actions/workflows/cmake.yml)
+
 ## Usage
 
 [How to add Op](doc/how-to-add-op.md)

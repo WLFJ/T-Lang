@@ -5,4 +5,4 @@ rm bison.tar.xz
 cd bison-3.8.2
 ./configure
 
-make install -j$(nproc)
+sudo make install -j$(nproc)

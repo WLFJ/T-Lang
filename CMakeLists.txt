@@ -8,8 +8,10 @@ set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(MLIR_DIR 3rdparty/llvm-project/build/lib/cmake/mlir)
 
-find_package(BISON)
-find_package(FLEX)
+set(BISON_EXECUTABLE "${PROJECT_SOURCE_DIR}/bison/bison-3.8.2/src/bison" CACHE PATH "Bison executable")
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")

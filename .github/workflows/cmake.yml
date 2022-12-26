@@ -1,4 +1,4 @@
-name: CMake
+name: Build
 
 on:
   workflow_dispatch:
@@ -12,11 +12,33 @@ jobs:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+      submodules: 'true'
+
     - uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Prepare 3rdparty/llvm-project build name
+      id: llvm-build-dir
+      run: |
+          echo "::set-output name=commit::$(git submodule status | awk '{print $1;}')"
+
+    - name: Cache llvm build directory
+      uses: actions/cache@v3
+      with:
+        path: 3rdparty/llvm-project
+        key: build-${{ steps.llvm-build-dir.outputs.commit }}
+
+    - name: Cache bison build directory
+      uses: actions/cache@v3
+      with:
+        path: bison
+        key: bison-3.8.2-build
 
     - name: Compile and Install GNU/Bison
       run: |

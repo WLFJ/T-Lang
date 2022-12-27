@@ -29,6 +29,8 @@ std::unique_ptr<mlir::Pass> createLowerToLinalgPass();
 /// well as `Linalg` `Affine` and `Std`, to the LLVM dialect for codegen.
 std::unique_ptr<mlir::Pass> createLowerToLLVMPass();
 
+std::unique_ptr<mlir::Pass> createToyBufferizePass();
+
 } // namespace tc
 } // namespace mlir
 

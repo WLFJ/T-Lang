@@ -1,6 +1,10 @@
 #include <iostream>
 #include <fstream>
+#include <memory>
+#include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -93,52 +97,80 @@ int main(void){
     context.getOrLoadDialect<mlir::tc::ToyDialect>();
     auto module = mlirGen(context, *drv.tcProgram);
 
-    mlir::PassManager pm(&context);
-    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+    {
+	    mlir::PassManager pm(&context);
+	    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
 
-    pm.addPass(mlir::createInlinerPass());
-    optPM.addPass(mlir::createCanonicalizerPass());
-    optPM.addPass(mlir::tc::createShapeInferencePass());
-    optPM.addPass(mlir::createCanonicalizerPass());
-    optPM.addPass(mlir::createCSEPass());
+	    pm.addPass(mlir::createInlinerPass());
+	    optPM.addPass(mlir::createCanonicalizerPass());
+	    (void)pm.run(*module);
 
-    pm.addPass(mlir::tc::createLowerToLinalgPass());
+	    module->dump();
+    }
+    {
+	    mlir::PassManager pm(&context);
+	    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+	    optPM.addPass(mlir::tc::createShapeInferencePass());
+	    optPM.addPass(mlir::createCanonicalizerPass());
+	    optPM.addPass(mlir::createCSEPass());
 
-    // {Affine, Linalg, Arith, Tensor} -> Bufferize
+	    (void)pm.run(*module);
 
-    pm.addPass(mlir::arith::createArithBufferizePass());
+	    module->dump();
+    }
 
-    mlir::OpPassManager &funcPM = pm.nest<mlir::func::FuncOp>();
+    {
+	    mlir::PassManager pm(&context);
+	    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
 
-    // replace tensor.empty 
-    funcPM.addPass(mlir::bufferization::createEmptyTensorToAllocTensorPass());
-    funcPM.addPass(mlir::createLinalgBufferizePass());
+	    pm.addPass(mlir::tc::createLowerToLinalgPass());
+	    // optPM.addPass(mlir::tosa::createTosaToLinalg());
 
-    // TODO: toylang bufferize and lower.
-    pm.addPass(mlir::tc::createLowerToLLVMPass()); // lower toy.print, buffrize and lower to LLVM.
+	    (void)pm.run(*module);
 
-    funcPM.addPass(mlir::createConvertLinalgToLoopsPass());
-    pm.addPass(mlir::func::createFuncBufferizePass()); // on module
+	    module->dump();
+    }
 
-    (void)pm.run(*module);
-    module->dump();
+    {
+	    mlir::PassManager pm(&context);
+	    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+
+	    pm.addPass(mlir::arith::createArithBufferizePass());
+
+	    mlir::OpPassManager &funcPM = pm.nest<mlir::func::FuncOp>();
+
+	    funcPM.addPass(mlir::bufferization::createEmptyTensorToAllocTensorPass());
+	 
+	    funcPM.addPass(mlir::createLinalgBufferizePass());
+	    funcPM.addPass(mlir::createConvertLinalgToLoopsPass());
+
+	    pm.addPass(mlir::tc::createToyBufferizePass());
+
+
+	    funcPM.addPass(mlir::createConvertLinalgToAffineLoopsPass());
+
+	    funcPM.addPass(mlir::createLowerAffinePass());
+
+	    auto res = pm.run(*module);
+
+	    module->dump();
+    }
+
+    {
+	    mlir::PassManager pm(&context);
+	    mlir::OpPassManager &optPM = pm.nest<mlir::tc::FuncOp>();
+
+	    pm.addPass(mlir::tc::createLowerToLLVMPass()); // lower toy.print, buffrize and lower to LLVM.
+
+
+	    auto res = pm.run(*module);
+
+	    module->dump();
+    }
+
+    dumpLLVMIR(*module);
 
     return 0;
-
-    // funcPM.addPass(mlir::bufferization::createFinalizingBufferizePass());
-
-    // funcPM.addPass(mlir::createConvertSCFToCFPass());
-    // funcPM.addPass(mlir::createLowerAffinePass());
-
-    // funcPM.addPass(mlir::createReconcileUnrealizedCastsPass());
-
-    // auto res = pm.run(*module);
-
-    // module->dump();
-
-    // // dumpLLVMIR(*module);
-
-    // return res.failed();
   }
   return res;
 }

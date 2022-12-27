@@ -17,4 +17,6 @@ then
 	cd ../..
 fi
 cd bison/bison-3.8.2/
-sudo make install -j$(nproc)
+make install -j$(nproc)
+
+echo "bison config done."

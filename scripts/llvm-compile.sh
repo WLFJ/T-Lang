@@ -1,9 +1,8 @@
 #!/bin/bash
 
-if [ ! -d 3rdparty/llvm-project ]
-then
-	git submodule update --init --depth 1
-fi
+rm -rf 3rdparty/llvm-project/*
+
+git submodule update --init --depth 1
 
 if [ ! -d 3rdparty/llvm-project/build ]
 then

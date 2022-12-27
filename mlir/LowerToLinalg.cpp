@@ -37,6 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include <iostream>
 
 using namespace mlir;

@@ -2,7 +2,9 @@
 #include <fstream>
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -110,17 +112,33 @@ int main(void){
 
     // replace tensor.empty 
     funcPM.addPass(mlir::bufferization::createEmptyTensorToAllocTensorPass());
-    funcPM.addPass(mlir::bufferization::createFinalizingBufferizePass());
-    
-    pm.addPass(mlir::tc::createLowerToLLVMPass());
+    funcPM.addPass(mlir::createLinalgBufferizePass());
 
-    auto res = pm.run(*module);
+    // TODO: toylang bufferize and lower.
+    pm.addPass(mlir::tc::createLowerToLLVMPass()); // lower toy.print, buffrize and lower to LLVM.
 
+    funcPM.addPass(mlir::createConvertLinalgToLoopsPass());
+    pm.addPass(mlir::func::createFuncBufferizePass()); // on module
+
+    (void)pm.run(*module);
     module->dump();
 
-    dumpLLVMIR(*module);
+    return 0;
 
-    return res.failed();
+    // funcPM.addPass(mlir::bufferization::createFinalizingBufferizePass());
+
+    // funcPM.addPass(mlir::createConvertSCFToCFPass());
+    // funcPM.addPass(mlir::createLowerAffinePass());
+
+    // funcPM.addPass(mlir::createReconcileUnrealizedCastsPass());
+
+    // auto res = pm.run(*module);
+
+    // module->dump();
+
+    // // dumpLLVMIR(*module);
+
+    // return res.failed();
   }
   return res;
 }

@@ -27,7 +27,12 @@
 
 #include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
 #include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tc/Dialect.h"
 #include "tc/Passes.h"
 
@@ -49,6 +54,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/IR/Instructions.h"
 #include <memory>
 
 using namespace mlir;
@@ -68,7 +74,8 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto memRefType = (*op->operand_type_begin()).cast<MemRefType>();
+    auto bfInput = (*op->operand_begin()).getDefiningOp();
+    auto memRefType = (*bfInput->operand_type_begin()).cast<MemRefType>();
     auto memRefShape = memRefType.getShape();
     auto loc = op->getLoc();
 
@@ -107,14 +114,15 @@ public:
 
     // Generate a call to printf for the current element of the loop.
     auto printOp = cast<tc::PrintOp>(op);
-    auto elementLoad =
-        rewriter.create<memref::LoadOp>(loc, printOp.getInput(), loopIvs);
+    auto elementLoad = rewriter.create<memref::LoadOp>(
+        loc, bfInput->getOpOperand(0).get(), loopIvs);
     rewriter.create<func::CallOp>(
         loc, printfRef, rewriter.getIntegerType(32),
         ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);
+    op->getParentOp()->dump();
     return success();
   }
 
@@ -169,6 +177,7 @@ private:
         globalPtr, ArrayRef<Value>({cst0, cst0}));
   }
 };
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -191,15 +200,19 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   // The first thing to define is the conversion target. This will define the
   // final target for this lowering. For this lowering, we are only targeting
   // the LLVM dialect.
-  LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp>();
+  ConversionTarget target(getContext());
+  // target.addLegalOp<ModuleOp>();
+  target.addLegalDialect<
+      AffineDialect, BuiltinDialect, arith::ArithDialect, func::FuncDialect,
+      memref::MemRefDialect, linalg::LinalgDialect, tensor::TensorDialect,
+      scf::SCFDialect, bufferization::BufferizationDialect>();
 
   // During this lowering, we will also be lowering the MemRef types, that are
   // currently being operated on, to a representation in LLVM. To perform this
   // conversion we use a TypeConverter as part of the lowering. This converter
   // details how one type maps to another. This is necessary now that we will be
   // doing more complicated lowerings, involving loop region arguments.
-  LLVMTypeConverter typeConverter(&getContext());
+  // LLVMTypeConverter typeConverter(&getContext());
 
   // Now that the conversion target has been defined, we need to provide the
   // patterns used for lowering. At this point of the compilation process, we
@@ -210,14 +223,14 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   // patterns must be applied to fully transform an illegal operation into a
   // set of legal ones.
   RewritePatternSet patterns(&getContext());
-  linalg::populateLinalgToStandardConversionPatterns(patterns);
-  populateBufferizationToMemRefConversionPatterns(patterns);
+  // linalg::populateLinalgToStandardConversionPatterns(patterns);
+  // populateBufferizationToMemRefConversionPatterns(patterns);
   // populateAffineToStdConversionPatterns(patterns);
-  populateSCFToControlFlowConversionPatterns(patterns);
-  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-  populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-  cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
-  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+  // populateSCFToControlFlowConversionPatterns(patterns);
+  // mlir::arith::populateArithToLLVMConversionPatterns(typeConverter,
+  // patterns); populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  // cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  // populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation to lower from the `toy` dialect, is the
   // PrintOp.

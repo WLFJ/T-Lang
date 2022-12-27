@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # if bison folder exists, skip building.
 if [ ! -d bison ]
 then

@@ -25,6 +25,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
+#include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "tc/Dialect.h"
 #include "tc/Passes.h"
 
@@ -46,6 +56,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/Casting.h"
 #include <memory>
 
 using namespace mlir;
@@ -65,6 +77,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
+    // auto bfInput = (*op->operand_begin()).getDefiningOp();
     auto memRefType = (*op->operand_type_begin()).cast<MemRefType>();
     auto memRefShape = memRefType.getShape();
     auto loc = op->getLoc();
@@ -104,14 +117,15 @@ public:
 
     // Generate a call to printf for the current element of the loop.
     auto printOp = cast<tc::PrintOp>(op);
-    auto elementLoad =
-        rewriter.create<memref::LoadOp>(loc, printOp.getInput(), loopIvs);
+    auto elementLoad = rewriter.create<memref::LoadOp>(
+        loc, printOp.getInput(), loopIvs);
     rewriter.create<func::CallOp>(
         loc, printfRef, rewriter.getIntegerType(32),
         ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);
+    op->getParentOp()->dump();
     return success();
   }
 
@@ -166,6 +180,7 @@ private:
         globalPtr, ArrayRef<Value>({cst0, cst0}));
   }
 };
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -213,6 +228,7 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
   populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+  populateReconcileUnrealizedCastsPatterns(patterns);
 
   // The only remaining operation to lower from the `toy` dialect, is the
   // PrintOp.
@@ -229,4 +245,50 @@ void ToyToLLVMLoweringPass::runOnOperation() {
 /// well as `Affine` and `Std`, to the LLVM dialect for codegen.
 std::unique_ptr<mlir::Pass> mlir::tc::createLowerToLLVMPass() {
   return std::make_unique<ToyToLLVMLoweringPass>();
+}
+
+class PrintOpBufferize : public ConversionPattern {
+public:
+  explicit PrintOpBufferize(MLIRContext *context)
+      : ConversionPattern(bufferization::ToTensorOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+	  // We'll find if toTensor op used by printOp
+	  auto usedOp = *op->user_begin();
+	  if(!isa<tc::PrintOp>(usedOp)){
+		return success();
+	  }
+
+	  auto printOp = llvm::dyn_cast<tc::PrintOp>(usedOp);
+	  printOp.setOperand(op->getOperand(0));
+	  printOp->dump();
+	  rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ToyBufferize
+    : public PassWrapper<ToyBufferize, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyBufferize)
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<tc::ToyDialect, memref::MemRefDialect, bufferization::BufferizationDialect>();
+  }
+
+  void runOnOperation() final {
+    ConversionTarget target(getContext());
+    RewritePatternSet patterns(&getContext());
+
+    patterns.add<PrintOpBufferize>(&getContext());
+
+    auto module = getOperation();
+    if (failed(applyPartialConversion(module, target, std::move(patterns))))
+      signalPassFailure();
+  };
+};
+
+std::unique_ptr<mlir::Pass> mlir::tc::createToyBufferizePass() {
+  return std::make_unique<ToyBufferize>();
 }

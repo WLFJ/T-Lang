@@ -4,7 +4,7 @@
   "features": {
     "ghcr.io/devcontainers-contrib/features/ninja-asdf:1": {},
     "ghcr.io/devcontainers-contrib/features/ccache-asdf:1": {}
-  }
+  },
   "onCreateCommand": [
     "${containerWorkspaceFolder}/scripts/codespaces-start.sh"
   ],

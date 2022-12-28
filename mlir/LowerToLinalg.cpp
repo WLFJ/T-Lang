@@ -13,10 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
-#include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
@@ -32,10 +30,10 @@
 #include "tc/Dialect.h"
 #include "tc/Passes.h"
 
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -86,8 +84,7 @@ namespace {
 // ToyToLinalg RewritePatterns: Binary operations
 //===----------------------------------------------------------------------===//
 
-SmallVector<Value>
-condenseValues(const SmallVector<Value> &values) {
+SmallVector<Value> condenseValues(const SmallVector<Value> &values) {
   SmallVector<Value> condensedValues;
   for (auto value : values)
     if (value)
@@ -100,116 +97,117 @@ struct BinaryOpLowering : public ConversionPattern {
   BinaryOpLowering(MLIRContext *ctx)
       : ConversionPattern(BinaryOp::getOperationName(), 1, ctx) {}
 
-
   LogicalResult
   matchAndRewrite(Operation *operation, ArrayRef<Value>,
                   ConversionPatternRewriter &rewriter) const final {
-  auto loc = operation->getLoc();
+    auto loc = operation->getLoc();
 
-  assert(operation->getNumResults() == 1 &&
-         "All TOSA elementwise ops should only return a single result.");
+    assert(operation->getNumResults() == 1 &&
+           "All TOSA elementwise ops should only return a single result.");
 
-  auto results = operation->getResults();
-  auto resultTy = operation->getResult(0).getType().dyn_cast<ShapedType>();
+    auto results = operation->getResults();
+    auto resultTy = operation->getResult(0).getType().dyn_cast<ShapedType>();
 
-  if (!resultTy)
-    return rewriter.notifyMatchFailure(operation,
-                                       "All results must be a shaped type");
+    if (!resultTy)
+      return rewriter.notifyMatchFailure(operation,
+                                         "All results must be a shaped type");
 
-  unsigned rank = resultTy.getRank();
+    unsigned rank = resultTy.getRank();
 
-  // Construct the indexing maps needed for linalg.generic ops.
-  SmallVector<Type> bodyArgTypes;
+    // Construct the indexing maps needed for linalg.generic ops.
+    SmallVector<Type> bodyArgTypes;
 
-  for (Value in : operation->getOperands())
-    bodyArgTypes.emplace_back(getElementTypeOrSelf(in.getType()));
+    for (Value in : operation->getOperands())
+      bodyArgTypes.emplace_back(getElementTypeOrSelf(in.getType()));
 
-  SmallVector<Type> opResultTypes;
-  SmallVector<Value> emptyTensors;
+    SmallVector<Type> opResultTypes;
+    SmallVector<Value> emptyTensors;
 
-  SmallVector<Value> dynDims;
-  dynDims.resize(results.front().getType().cast<ShapedType>().getRank());
+    SmallVector<Value> dynDims;
+    dynDims.resize(results.front().getType().cast<ShapedType>().getRank());
 
-  for (auto arg : operation->getOperands()) {
-    auto operandTy = arg.getType().cast<ShapedType>();
-    for (int i = 0; i < operandTy.getRank(); i++) {
-      if (operandTy.isDynamicDim(i) && !dynDims[i])
-        dynDims[i] = rewriter.create<tensor::DimOp>(loc, arg, i);
-    }
-  }
-
-  SmallVector<Value> filteredDims = condenseValues(dynDims);
-
-  for (auto result : results) {
-    auto resultTy = result.getType().template cast<ShapedType>();
-    emptyTensors.push_back(rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultTy.getElementType(), filteredDims));
-    opResultTypes.push_back(result.getType());
-  }
-
-  auto bodyResultTypes = llvm::to_vector<4>(llvm::map_range(
-      emptyTensors, [](Value v) { return getElementTypeOrSelf(v); }));
-
-  SmallVector<Value, 2> operands;
-  SmallVector<AffineMap, 2> indexingMaps;
-  indexingMaps.reserve(operation->getNumOperands() + bodyResultTypes.size());
-
-  // Input indexing maps may be broadcasted.
-  for (Value operand : operation->getOperands()) {
-    ShapedType type = operand.getType().cast<ShapedType>();
-
-    if (type.getShape() == resultTy.getShape()) {
-      operands.push_back(operand);
-      indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
-      continue;
-    }
-
-    SmallVector<int64_t, 5> newShape;
-    SmallVector<AffineExpr, 4> affineExprs;
-    newShape.reserve(type.getRank());
-    for (const auto &it : llvm::enumerate(type.getShape())) {
-      if (it.value() == resultTy.getDimSize(it.index())) {
-        newShape.push_back(it.value());
-        affineExprs.push_back(
-            mlir::getAffineDimExpr(it.index(), rewriter.getContext()));
+    for (auto arg : operation->getOperands()) {
+      auto operandTy = arg.getType().cast<ShapedType>();
+      for (int i = 0; i < operandTy.getRank(); i++) {
+        if (operandTy.isDynamicDim(i) && !dynDims[i])
+          dynDims[i] = rewriter.create<tensor::DimOp>(loc, arg, i);
       }
     }
 
-    if (newShape.size() != rank) {
-      operand = rewriter.create<tosa::ReshapeOp>(
-          loc, RankedTensorType::get(newShape, type.getElementType()), operand,
-          rewriter.getI64ArrayAttr(newShape));
+    SmallVector<Value> filteredDims = condenseValues(dynDims);
+
+    for (auto result : results) {
+      auto resultTy = result.getType().template cast<ShapedType>();
+      emptyTensors.push_back(rewriter.create<tensor::EmptyOp>(
+          loc, resultTy.getShape(), resultTy.getElementType(), filteredDims));
+      opResultTypes.push_back(result.getType());
     }
 
-    operands.push_back(operand);
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/rank, /*symbolCount=*/0, affineExprs,
-        rewriter.getContext()));
-  }
+    auto bodyResultTypes = llvm::to_vector<4>(llvm::map_range(
+        emptyTensors, [](Value v) { return getElementTypeOrSelf(v); }));
 
-  indexingMaps.append(operation->getNumResults(),
-                      rewriter.getMultiDimIdentityMap(rank));
+    SmallVector<Value, 2> operands;
+    SmallVector<AffineMap, 2> indexingMaps;
+    indexingMaps.reserve(operation->getNumOperands() + bodyResultTypes.size());
 
-  bool didEncounterError = false;
-  auto linalgOp = rewriter.create<linalg::GenericOp>(
-      loc, opResultTypes, operands, emptyTensors, indexingMaps,
-      SmallVector<StringRef>(rank, getParallelIteratorTypeName()),
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
-        Value opResult = rewriter.create<LoweredBinaryOp>(loc, blockArgs.take_front(operation->getNumOperands()));
-        if (!opResult) {
-          didEncounterError = true;
-          return;
+    // Input indexing maps may be broadcasted.
+    for (Value operand : operation->getOperands()) {
+      ShapedType type = operand.getType().cast<ShapedType>();
+
+      if (type.getShape() == resultTy.getShape()) {
+        operands.push_back(operand);
+        indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
+        continue;
+      }
+
+      SmallVector<int64_t, 5> newShape;
+      SmallVector<AffineExpr, 4> affineExprs;
+      newShape.reserve(type.getRank());
+      for (const auto &it : llvm::enumerate(type.getShape())) {
+        if (it.value() == resultTy.getDimSize(it.index())) {
+          newShape.push_back(it.value());
+          affineExprs.push_back(
+              mlir::getAffineDimExpr(it.index(), rewriter.getContext()));
         }
-        nestedBuilder.create<linalg::YieldOp>(loc, opResult);
-      });
+      }
 
-  if (didEncounterError)
-    return failure();
+      if (newShape.size() != rank) {
+        // operand = rewriter.create<tosa::ReshapeOp>(
+        //     loc, RankedTensorType::get(newShape, type.getElementType()),
+        //     operand, rewriter.getI64ArrayAttr(newShape));
+        return rewriter.notifyMatchFailure(operation, "Op shape mismatch.");
+      }
 
-  rewriter.replaceOp(operation, linalgOp->getResults());
-  return success();
+      operands.push_back(operand);
+      indexingMaps.push_back(AffineMap::get(
+          /*dimCount=*/rank, /*symbolCount=*/0, affineExprs,
+          rewriter.getContext()));
+    }
+
+    indexingMaps.append(operation->getNumResults(),
+                        rewriter.getMultiDimIdentityMap(rank));
+
+    bool didEncounterError = false;
+    auto linalgOp = rewriter.create<linalg::GenericOp>(
+        loc, opResultTypes, operands, emptyTensors, indexingMaps,
+        SmallVector<StringRef>(rank, getParallelIteratorTypeName()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc,
+            ValueRange blockArgs) {
+          Value opResult = rewriter.create<LoweredBinaryOp>(
+              loc, blockArgs.take_front(operation->getNumOperands()));
+          if (!opResult) {
+            didEncounterError = true;
+            return;
+          }
+          nestedBuilder.create<linalg::YieldOp>(loc, opResult);
+        });
+
+    if (didEncounterError)
+      return failure();
+
+    rewriter.replaceOp(operation, linalgOp->getResults());
+    return success();
   }
-
 };
 using AddOpLowering = BinaryOpLowering<tc::AddOp, arith::AddFOp>;
 using MulOpLowering = BinaryOpLowering<tc::MulOp, arith::MulFOp>;
@@ -218,7 +216,7 @@ using MulOpLowering = BinaryOpLowering<tc::MulOp, arith::MulFOp>;
 // ToyToLinalg RewritePatterns: Constant operations
 //===----------------------------------------------------------------------===//
 
-/// Previously we convert it into memref manually, but it will generate 
+/// Previously we convert it into memref manually, but it will generate
 /// too much code so that it makes optimization slowly.
 struct ConstantOpLowering : public OpRewritePattern<tc::ConstantOp> {
   using OpRewritePattern<tc::ConstantOp>::OpRewritePattern;
@@ -325,16 +323,18 @@ struct TransposeOpLowering : public ConversionPattern {
     auto loc = op->getLoc();
     auto transOp = dyn_cast<tc::TransposeOp>(op);
 
-    // TODO: for now only support "linear algebra transpose", we should make it more generic.
+    // TODO: for now only support "linear algebra transpose", we should make it
+    // more generic.
     SmallVector<int64_t> weightPerm;
-    for(int64_t i = transOp.getType().getShape().size(); i != 0; -- i){
-	weightPerm.push_back(i - 1);
+    for (int64_t i = transOp.getType().getShape().size(); i != 0; --i) {
+      weightPerm.push_back(i - 1);
     }
-    auto weightPermAttr = DenseI64ArrayAttr::get(
-        getContext(), weightPerm);
+    auto weightPermAttr = DenseI64ArrayAttr::get(getContext(), weightPerm);
 
-    auto initTensor = rewriter.create<tensor::EmptyOp>(loc, transOp.getType().getShape(), transOp.getType().getElementType());
-    auto linTransOp = rewriter.create<linalg::TransposeOp>(loc, transOp.getInput(), initTensor, weightPermAttr);
+    auto initTensor = rewriter.create<tensor::EmptyOp>(
+        loc, transOp.getType().getShape(), transOp.getType().getElementType());
+    auto linTransOp = rewriter.create<linalg::TransposeOp>(
+        loc, transOp.getInput(), initTensor, weightPermAttr);
     rewriter.replaceOp(op, linTransOp.getResult());
     return success();
   }
@@ -359,9 +359,11 @@ struct MatmulOpLowering : public ConversionPattern {
 
     auto ty = mmOp.getType();
     // due to matmul is a += matmul(b, c), so, we need a empty tensor a.
-    auto resTensor = rewriter.create<tensor::EmptyOp>(loc, ty.getShape(), ty.getElementType());
+    auto resTensor = rewriter.create<tensor::EmptyOp>(loc, ty.getShape(),
+                                                      ty.getElementType());
 
-    auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(loc, ValueRange{operands[0], operands[1]}, ValueRange{resTensor});
+    auto linalgMatmulOp = rewriter.create<linalg::MatmulOp>(
+        loc, ValueRange{operands[0], operands[1]}, ValueRange{resTensor});
 
     // convert linalg.matmul into loops.
     // (void)linalg::linalgOpToAffineLoops(rewriter, linalgMatmulOp);
@@ -389,7 +391,8 @@ struct ToyToLinalgLoweringPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToLinalgLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect>();
+    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect,
+                    linalg::LinalgDialect>();
   }
   void runOnOperation() final;
 };
@@ -404,7 +407,8 @@ void ToyToLinalgLoweringPass::runOnOperation() {
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
   target.addLegalDialect<AffineDialect, BuiltinDialect, arith::ArithDialect,
-                         func::FuncDialect, memref::MemRefDialect, linalg::LinalgDialect, tensor::TensorDialect>();
+                         func::FuncDialect, memref::MemRefDialect,
+                         linalg::LinalgDialect, tensor::TensorDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want
@@ -415,15 +419,16 @@ void ToyToLinalgLoweringPass::runOnOperation() {
   target.addIllegalDialect<tc::ToyDialect>();
   target.addDynamicallyLegalOp<tc::PrintOp>([](tc::PrintOp op) {
     return llvm::all_of(op->getOperandTypes(),
-                         [](Type type) { return type.isa<TensorType>(); });
+                        [](Type type) { return type.isa<TensorType>(); });
   });
 
   // Now that the conversion target has been defined, we just need to provide
   // the set of patterns that will lower the Toy operations.
   RewritePatternSet patterns(&getContext());
   patterns.add<AddOpLowering, ConstantOpLowering, FuncOpLowering, MulOpLowering,
-               PrintOpLowering, ReturnOpLowering, TransposeOpLowering, MatmulOpLowering>(
-      &getContext());
+               PrintOpLowering, ReturnOpLowering, TransposeOpLowering,
+               MatmulOpLowering>(&getContext());
+  // tosa::populateTosaToLinalgConversionPatterns(&patterns);
 
   // With the target and rewrite patterns defined, we can now attempt the
   // conversion. The conversion will signal failure if any of our `illegal`

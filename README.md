@@ -92,3 +92,4 @@ lin tile(a<m>) {
 - [ ] FileCheck (LLVM is needed).
 - [ ] Automatic Test.(Maybe `cmake test`).
 - [ ] Add remain supported expr.
+- [ ] Integret FileCheck into CMake. e.g. `./tcc test/case-check-FileCheck && ./a.out | FileCheck test/case-check-FileCheck`

@@ -1,0 +1,6 @@
+# RUN: ./tcc %s && ./a.out | FileCheck %s
+def main(){
+  var a = [1, 2, 3];
+  print(a);
+}
+# CHECK: 1.000000 2.000000 3.000000

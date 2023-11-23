@@ -8,7 +8,7 @@ set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(MLIR_DIR 3rdparty/llvm-project/build/lib/cmake/mlir)
 
-set(BISON_EXECUTABLE "/usr/local/bin/bison" CACHE PATH "Bison executable")
+# set(BISON_EXECUTABLE "/usr/local/bin/bison" CACHE PATH "Bison executable")
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
